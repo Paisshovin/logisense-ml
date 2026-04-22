@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LogiSense — Delay Forecasting</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #0a0f1e;
+    --surface:  #111827;
+    --card:     #1a2235;
+    --border:   rgba(255,255,255,0.07);
+    --accent:   #3b82f6;
+    --accent2:  #06b6d4;
+    --danger:   #ef4444;
+    --warn:     #f59e0b;
+    --success:  #10b981;
+    --text:     #f1f5f9;
+    --muted:    #64748b;
+    --font:     'Syne', sans-serif;
+    --mono:     'DM Mono', monospace;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* Layout */
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+  .main { padding: 28px 32px; overflow-y: auto; }
+
+  /* Sidebar */
+  .logo { padding: 0 20px 28px; border-bottom: 1px solid var(--border); }
+  .logo-mark { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-icon svg { width: 20px; height: 20px; fill: white; }
+  .logo-name { font-size: 18px; font-weight: 700; color: var(--text); }
+  .logo-sub { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.05em; }
+  .nav { padding: 20px 12px; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--muted); transition: all 0.15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+  .nav-item.active { background: rgba(59,130,246,0.15); color: var(--accent); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-section { font-size: 10px; color: var(--muted); padding: 12px 12px 6px; letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--mono); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); margin-left: auto; animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-size: 22px; font-weight: 700; }
+  .page-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .live-badge { display: flex; align-items: center; gap: 6px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: var(--success); font-size: 11px; padding: 5px 12px; border-radius: 20px; font-family: var(--mono); }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+  .metric-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .metric-card::before { content:''; position:absolute; top:0; right:0; width:60px; height:60px; border-radius:0 12px 0 60px; opacity:0.08; }
+  .metric-card.blue::before  { background:var(--accent); }
+  .metric-card.cyan::before  { background:var(--accent2); }
+  .metric-card.red::before   { background:var(--danger); }
+  .metric-card.green::before { background:var(--success); }
+  .metric-label { font-size: 11px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .metric-value { font-size: 28px; font-weight: 700; line-height: 1; }
+  .metric-value.blue  { color: var(--accent); }
+  .metric-value.cyan  { color: var(--accent2); }
+  .metric-value.red   { color: var(--danger); }
+  .metric-value.green { color: var(--success); }
+  .metric-delta { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: var(--mono); }
+
+  /* Grid layouts */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .span2 { grid-column: span 2; }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--mono); }
+
+  /* Risk badges */
+  .badge { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; font-family: var(--mono); }
+  .badge-high   { background: rgba(239,68,68,0.15);   color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .badge-medium { background: rgba(245,158,11,0.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+  .badge-low    { background: rgba(16,185,129,0.15);  color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+
+  /* Shipment table */
+  .ship-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .ship-row:last-child { border-bottom: none; }
+  .ship-id { font-family: var(--mono); font-weight: 500; color: var(--accent2); flex: 0 0 70px; }
+  .ship-route { color: var(--muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ship-prob { flex: 0 0 38px; text-align: right; font-family: var(--mono); font-size: 11px; }
+  .prob-bar-wrap { flex: 0 0 70px; }
+  .prob-bar { height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+  .prob-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+
+  /* Feature importance */
+  .feat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 11px; }
+  .feat-name { flex: 0 0 140px; color: var(--muted); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feat-bar-w { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+  .feat-fill { height: 100%; border-radius: 3px; }
+  .feat-pct { flex: 0 0 32px; text-align: right; font-family: var(--mono); color: var(--muted); }
+
+  /* Predict form */
+  .predict-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 10px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-control { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 7px; padding: 8px 11px; font-size: 12px; color: var(--text); font-family: var(--mono); transition: border 0.15s; outline: none; }
+  .form-control:focus { border-color: var(--accent); }
+  select.form-control option { background: var(--surface); }
+  .predict-btn { width: 100%; padding: 11px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font); transition: opacity 0.15s; }
+  .predict-btn:hover { opacity: 0.88; }
+  .predict-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Result panel */
+  .result-panel { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 20px; text-align: center; }
+  .result-prob { font-size: 48px; font-weight: 700; line-height: 1; font-family: var(--mono); }
+  .result-verdict { font-size: 13px; margin-top: 6px; font-weight: 600; letter-spacing: 0.05em; }
+  .result-classes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .result-class { border-radius: 7px; padding: 10px; }
+  .result-class-val { font-size: 18px; font-weight: 700; font-family: var(--mono); }
+  .result-class-lbl { font-size: 9px; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+  .factors-list { text-align: left; margin-top: 14px; }
+  .factor-item { display: flex; align-items: flex-start; gap: 7px; font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
+  .factor-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--warn); margin-top: 4px; flex-shrink: 0; }
+  .rec-box { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15); border-radius: 7px; padding: 10px 12px; font-size: 11px; color: var(--accent); text-align: left; margin-top: 10px; font-family: var(--mono); }
+  .placeholder-msg { color: var(--muted); font-size: 13px; padding: 40px 0; font-family: var(--mono); }
+  .loading-msg { color: var(--accent); font-size: 13px; padding: 40px 0; font-family: var(--mono); }
+  .error-msg { color: var(--danger); font-size: 12px; padding: 20px 0; font-family: var(--mono); }
+
+  /* API status */
+  .api-status { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--mono); }
+  .api-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .api-dot.ok  { background: var(--success); }
+  .api-dot.err { background: var(--danger); }
+
+  /* Tab content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const API = "http://localhost:8000";
+
+const SHIPMENTS = [
+  { id:"SH-4821", route:"Shanghai → Chicago", carrier:"MSC", mode:"ocean", prob:0.91 },
+  { id:"SH-3907", route:"Rotterdam → Mumbai", carrier:"Maersk", mode:"ocean", prob:0.78 },
+  { id:"SH-5512", route:"Hamburg → Tokyo",    carrier:"DB Schenker", mode:"rail", prob:0.71 },
+  { id:"SH-2244", route:"LA → Frankfurt",     carrier:"DHL Express", mode:"air",  prob:0.63 },
+  { id:"SH-6103", route:"Singapore → London", carrier:"CMA CGM", mode:"ocean", prob:0.54 },
+  { id:"SH-1198", route:"Mumbai → Chicago",   carrier:"FedEx",  mode:"air",   prob:0.32 },
+  { id:"SH-8871", route:"Tokyo → LA",         carrier:"Maersk", mode:"ocean", prob:0.18 },
+];
+
+const FEATURES = [
+  { name:"weather_severity",    pct:87 },
+  { name:"port_congestion",     pct:81 },
+  { name:"carrier_otr_30d",     pct:74 },
+  { name:"customs_complexity",  pct:68 },
+  { name:"route_delay_hist",    pct:61 },
+  { name:"transit_distance",    pct:53 },
+  { name:"composite_risk",      pct:44 },
+  { name:"seasonal_factor",     pct:38 },
+];
+
+function riskColor(p) {
+  if (p >= 0.7) return "#ef4444";
+  if (p >= 0.35) return "#f59e0b";
+  return "#10b981";
+}
+function riskLevel(p) {
+  if (p >= 0.7) return "HIGH";
+  if (p >= 0.35) return "MEDIUM";
+  return "LOW";
+}
+function badgeClass(p) {
+  if (p >= 0.7) return "badge badge-high";
+  if (p >= 0.35) return "badge badge-medium";
+  return "badge badge-low";
+}
+
+// ── Sidebar nav ───────────────────────────────────────────────
+function Sidebar({ active, setActive, apiOk }) {
+  const nav = [
+    { id:"dashboard", label:"Dashboard",    icon:<path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"/> },
+    { id:"predict",   label:"Predict",      icon:<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/> },
+    { id:"monitor",   label:"Monitor",      icon:<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/> },
+    { id:"models",    label:"Models",       icon:<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/> },
+  ];
+  return (
+    <div className="sidebar">
+      <div className="logo">
+        <div className="logo-mark">
+          <div className="logo-icon">
+            <svg viewBox="0 0 24 24"><path d="M2 10l10-8 10 8v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg>
+          </div>
+          <div>
+            <div className="logo-name">LogiSense</div>
+            <div className="logo-sub">ML Forecasting v1.0</div>
+          </div>
+        </div>
+      </div>
+      <div className="nav">
+        <div className="nav-section">Navigation</div>
+        {nav.map(n => (
+          <button key={n.id} className={`nav-item ${active===n.id?"active":""}`} onClick={()=>setActive(n.id)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{n.icon}</svg>
+            {n.label}
+            {n.id==="dashboard" && <div className="status-dot"/>}
+          </button>
+        ))}
+        <div className="nav-section" style={{marginTop:20}}>API Status</div>
+        <div style={{padding:"0 12px"}}>
+          <div className="api-status">
+            <div className={`api-dot ${apiOk?"ok":"err"}`}/>
+            <span style={{color: apiOk?"#34d399":"#f87171"}}>
+              {apiOk ? "API connected" : "API offline"}
+            </span>
+          </div>
+          <div style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:4}}>
+            localhost:8000
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard tab ─────────────────────────────────────────────
+function Dashboard() {
+  const chartRef = useRef(null);
+  const trendRef = useRef(null);
+  useEffect(()=>{
+    // Distribution chart
+    const ctx1 = document.getElementById("distChart");
+    if (ctx1 && !ctx1._chart) {
+      ctx1._chart = new Chart(ctx1, {
+        type:"bar",
+        data:{
+          labels:["0-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%","80-90%","90-100%"],
+          datasets:[{
+            data:[52,61,48,39,31,28,24,18,25,16],
+            backgroundColor:["#10b981","#10b981","#10b981","#f59e0b","#f59e0b","#f59e0b","#f59e0b","#ef4444","#ef4444","#ef4444"],
+            borderRadius:4,borderSkipped:false
+          }]
+        },
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:false}},
+          scales:{
+            x:{ticks:{color:"#64748b",font:{size:9}},grid:{color:"rgba(255,255,255,0.03)"}},
+            y:{ticks:{color:"#64748b",font:{size:9}},grid:{color:"rgba(255,255,255,0.05)"}}
+          }}
+      });
+    }
+    // Trend chart
+    const ctx2 = document.getElementById("trendChart");
+    if (ctx2 && !ctx2._chart) {
+      ctx2._chart = new Chart(ctx2, {
+        type:"line",
+        data:{
+          labels:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+          datasets:[
+            {label:"Delayed",data:[38,45,41,52,49,44,47],borderColor:"#ef4444",borderWidth:2,tension:0.4,pointRadius:3,fill:false},
+            {label:"On Time",data:[182,174,181,168,173,179,176],borderColor:"#10b981",borderWidth:2,tension:0.4,pointRadius:3,fill:false,borderDash:[4,3]}
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:"#64748b",font:{size:10},boxWidth:10}}},
+          scales:{
+            x:{ticks:{color:"#64748b",font:{size:9}},grid:{display:false}},
+            y:{ticks:{color:"#64748b",font:{size:9}},grid:{color:"rgba(255,255,255,0.05)"}}
+          }}
+      });
+    }
+  },[]);
+
+  return (
+    <div>
+      <div className="metrics">
+        {[
+          {label:"Active Shipments", value:"342", color:"blue",  delta:"+12 today"},
+          {label:"High Risk Delays", value:"47",  color:"red",   delta:"↑8 this hour"},
+          {label:"On-Time Rate",     value:"81%", color:"green", delta:"↑2.1% vs last week"},
+          {label:"Model Accuracy",   value:"93%", color:"cyan",  delta:"XGBoost v1.0"},
+        ].map(m=>(
+          <div key={m.label} className={`metric-card ${m.color}`}>
+            <div className="metric-label">{m.label}</div>
+            <div className={`metric-value ${m.color}`}>{m.value}</div>
+            <div className="metric-delta">{m.delta}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid2">
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Shipments at risk</div>
+            <span className="badge badge-high">{SHIPMENTS.filter(s=>s.prob>=0.7).length} critical</span>
+          </div>
+          {SHIPMENTS.map(s=>(
+            <div key={s.id} className="ship-row">
+              <span className="ship-id">{s.id}</span>
+              <span className="ship-route">{s.route} · {s.mode}</span>
+              <div className="prob-bar-wrap">
+                <div className="prob-bar">
+                  <div className="prob-fill" style={{width:`${Math.round(s.prob*100)}%`,background:riskColor(s.prob)}}/>
+                </div>
+              </div>
+              <span className="ship-prob" style={{color:riskColor(s.prob)}}>{Math.round(s.prob*100)}%</span>
+              <span className={badgeClass(s.prob)}>{riskLevel(s.prob)}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="card">
+          <div className="card-header"><div className="card-title">Delay probability distribution</div></div>
+          <div style={{position:"relative",height:"200px"}}>
+            <canvas id="distChart" role="img" aria-label="Histogram of delay probabilities"/>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid2">
+        <div className="card">
+          <div className="card-header"><div className="card-title">7-day delay trend</div></div>
+          <div style={{position:"relative",height:"160px"}}>
+            <canvas id="trendChart" role="img" aria-label="Line chart of delay trend"/>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><div className="card-title">Top delay drivers · ML attributed</div></div>
+          {FEATURES.map((f,i)=>(
+            <div key={f.name} className="feat-row">
+              <span className="feat-name">{f.name}</span>
+              <div className="feat-bar-w">
+                <div className="feat-fill" style={{width:`${f.pct}%`,background:`rgba(59,130,246,${0.4+i*0.07})`}}/>
+              </div>
+              <span className="feat-pct">{f.pct}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Predict tab ───────────────────────────────────────────────
+function Predict({ apiOk }) {
+  const [form, setForm] = useState({
+    shipment_id:"SH-TEST-01", order_date:"2024-11-15",
+    carrier:"MSC", transport_mode:"ocean", cargo_type:"general",
+    customs_complexity:"standard", origin:"Shanghai", destination:"Chicago",
+    weight_kg:2400, distance_km:12500, carrier_otr_30d:0.82,
+    port_congestion:0.55, weather_severity:0.40,
+    planned_lead_days:21, is_peak_season:0,
+  });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const predict = async () => {
+    setLoading(true); setError(null); setResult(null);
+    try {
+      const payload = {...form,
+        weight_kg: parseFloat(form.weight_kg),
+        distance_km: parseFloat(form.distance_km),
+        carrier_otr_30d: parseFloat(form.carrier_otr_30d),
+        port_congestion: parseFloat(form.port_congestion),
+        weather_severity: parseFloat(form.weather_severity),
+        planned_lead_days: parseInt(form.planned_lead_days),
+        is_peak_season: parseInt(form.is_peak_season),
+      };
+      const res = await fetch(`${API}/predict`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      setResult(await res.json());
+    } catch(e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const color = result ? riskColor(result.delay_probability) : "var(--accent)";
+
+  return (
+    <div className="grid2">
+      <div className="card">
+        <div className="card-header"><div className="card-title">Shipment parameters</div></div>
+        <div className="predict-grid">
+          {[
+            {k:"shipment_id",  label:"Shipment ID",   type:"text"},
+            {k:"order_date",   label:"Order Date",     type:"date"},
+            {k:"origin",       label:"Origin City",    type:"text"},
+            {k:"destination",  label:"Destination",    type:"text"},
+            {k:"weight_kg",    label:"Weight (kg)",    type:"number"},
+            {k:"distance_km",  label:"Distance (km)",  type:"number"},
+            {k:"planned_lead_days", label:"Lead Days", type:"number"},
+            {k:"carrier_otr_30d",   label:"Carrier OTR (0-1)", type:"number"},
+            {k:"port_congestion",   label:"Port Congestion (0-1)", type:"number"},
+            {k:"weather_severity",  label:"Weather Risk (0-1)", type:"number"},
+          ].map(f=>(
+            <div key={f.k} className="form-group">
+              <label className="form-label">{f.label}</label>
+              <input className="form-control" type={f.type} value={form[f.k]}
+                onChange={e=>set(f.k, e.target.value)} step="any"/>
+            </div>
+          ))}
+          {[
+            {k:"carrier",             label:"Carrier",             opts:["Maersk","MSC","CMA CGM","DHL Express","FedEx","UPS","DB Schenker"]},
+            {k:"transport_mode",      label:"Transport Mode",      opts:["ocean","air","road","rail","multimodal"]},
+            {k:"cargo_type",          label:"Cargo Type",          opts:["general","hazmat","perishable","fragile","bulk"]},
+            {k:"customs_complexity",  label:"Customs",             opts:["standard","complex","high_scrutiny"]},
+            {k:"is_peak_season",      label:"Peak Season",         opts:["0","1"]},
+          ].map(f=>(
+            <div key={f.k} className="form-group">
+              <label className="form-label">{f.label}</label>
+              <select className="form-control" value={form[f.k]} onChange={e=>set(f.k,e.target.value)}>
+                {f.opts.map(o=><option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+        <button className="predict-btn" onClick={predict} disabled={loading||!apiOk}>
+          {loading ? "Running prediction..." : apiOk ? "Run ML Prediction →" : "API Offline — start server first"}
+        </button>
+        {!apiOk && <div className="error-msg">Start the FastAPI server: uvicorn api:app --reload --port 8000</div>}
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div className="card-title">Prediction result</div></div>
+        {!result && !loading && !error && (
+          <div className="placeholder-msg">Fill the form and click predict →</div>
+        )}
+        {loading && <div className="loading-msg">⟳ Running XGBoost inference...</div>}
+        {error && <div className="error-msg">❌ {error}<br/>Make sure the API server is running.</div>}
+        {result && (
+          <div className="result-panel">
+            <div className="result-prob" style={{color}}>{result.delay_probability_pct}</div>
+            <div className="result-verdict" style={{color}}>{result.prediction} · {result.risk_level} RISK</div>
+            <div style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:4}}>
+              Confidence: {result.confidence} · Est. delay: {result.estimated_delay_days}d
+            </div>
+            <div className="result-classes">
+              {[
+                {label:"On Time",     val: `${Math.round((1-result.delay_probability)*60)}%`, bg:"rgba(16,185,129,0.1)",  c:"#34d399"},
+                {label:"Minor Delay", val: `${Math.round(result.delay_probability*40)}%`,      bg:"rgba(245,158,11,0.1)",  c:"#fbbf24"},
+                {label:"Major Delay", val: `${Math.round(result.delay_probability*55)}%`,      bg:"rgba(239,68,68,0.1)",   c:"#f87171"},
+              ].map(c=>(
+                <div key={c.label} className="result-class" style={{background:c.bg}}>
+                  <div className="result-class-val" style={{color:c.c}}>{c.val}</div>
+                  <div className="result-class-lbl" style={{color:c.c}}>{c.label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="factors-list">
+              <div style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>Key risk factors</div>
+              {result.key_risk_factors.map((f,i)=>(
+                <div key={i} className="factor-item">
+                  <div className="factor-dot"/>
+                  {f}
+                </div>
+              ))}
+            </div>
+            <div className="rec-box">💡 {result.recommendation}</div>
+            <div style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:10,textAlign:"left"}}>
+              Model: {result.model_version}<br/>
+              Predicted: {new Date(result.predicted_at).toLocaleTimeString()}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Monitor tab ───────────────────────────────────────────────
+function Monitor() {
+  return (
+    <div className="card" style={{textAlign:"center",padding:"60px 20px"}}>
+      <div style={{fontSize:32,marginBottom:12}}>📡</div>
+      <div style={{fontSize:16,fontWeight:600,marginBottom:8}}>Live monitoring coming soon</div>
+      <div style={{fontSize:12,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+        Connect your TMS/WMS data stream to see real-time predictions here.<br/>
+        Use <span style={{color:"var(--accent)"}}>POST /predict/batch</span> to score your full fleet every hour.
+      </div>
+    </div>
+  );
+}
+
+// ── Models tab ────────────────────────────────────────────────
+function Models({ modelInfo }) {
+  if (!modelInfo) return (
+    <div className="card" style={{textAlign:"center",padding:"60px 20px"}}>
+      <div style={{fontSize:12,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+        API offline — start server to view model info
+      </div>
+    </div>
+  );
+  return (
+    <div className="grid2">
+      <div className="card">
+        <div className="card-header"><div className="card-title">Model details</div></div>
+        {[
+          ["Model name",   modelInfo.model_name],
+          ["Trained at",   modelInfo.trained_at?.slice(0,19)],
+          ["Threshold",    modelInfo.threshold],
+          ["Features",     modelInfo.n_features],
+        ].map(([k,v])=>(
+          <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)",fontSize:12}}>
+            <span style={{color:"var(--muted)",fontFamily:"var(--mono)"}}>{k}</span>
+            <span style={{fontFamily:"var(--mono)",color:"var(--accent2)"}}>{v}</span>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="card-header"><div className="card-title">Test set metrics</div></div>
+        {Object.entries(modelInfo.metrics||{}).map(([k,v])=>(
+          <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid var(--border)",fontSize:12}}>
+            <span style={{color:"var(--muted)",fontFamily:"var(--mono)"}}>{k.replace("test_","")}</span>
+            <span style={{fontFamily:"var(--mono)",color:"var(--success)",fontWeight:600}}>{(v*100).toFixed(1)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── App root ──────────────────────────────────────────────────
+function App() {
+  const [tab, setTab]         = useState("dashboard");
+  const [apiOk, setApiOk]     = useState(false);
+  const [modelInfo, setModelInfo] = useState(null);
+
+  useEffect(()=>{
+    const check = async () => {
+      try {
+        const r = await fetch(`${API}/health`);
+        if (r.ok) {
+          setApiOk(true);
+          const info = await fetch(`${API}/model/info`);
+          if (info.ok) setModelInfo(await info.json());
+        }
+      } catch { setApiOk(false); }
+    };
+    check();
+    const iv = setInterval(check, 10000);
+    return () => clearInterval(iv);
+  },[]);
+
+  const titles = {
+    dashboard: { title:"Control Tower",   sub:"Real-time shipment risk monitoring" },
+    predict:   { title:"Predict Delay",   sub:"Single shipment ML inference" },
+    monitor:   { title:"Live Monitor",    sub:"Fleet-wide risk feed" },
+    models:    { title:"Model Registry",  sub:"XGBoost performance metrics" },
+  };
+
+  return (
+    <div className="shell">
+      <Sidebar active={tab} setActive={setTab} apiOk={apiOk}/>
+      <div className="main">
+        <div className="topbar">
+          <div>
+            <div className="page-title">{titles[tab].title}</div>
+            <div className="page-sub">{titles[tab].sub}</div>
+          </div>
+          <div className="topbar-right">
+            <div className="live-badge">
+              <div className="status-dot"/>
+              {apiOk ? "API connected · localhost:8000" : "API offline"}
+            </div>
+          </div>
+        </div>
+        {tab==="dashboard" && <Dashboard/>}
+        {tab==="predict"   && <Predict apiOk={apiOk}/>}
+        {tab==="monitor"   && <Monitor/>}
+        {tab==="models"    && <Models modelInfo={modelInfo}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

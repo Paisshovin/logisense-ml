@@ -152,7 +152,8 @@
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-const API = "https://web-production-d0f39.up.railway.app";
+const API = "http://localhost:8000";
+
 const SHIPMENTS = [
   { id:"SH-4821", route:"Shanghai → Chicago", carrier:"MSC", mode:"ocean", prob:0.91 },
   { id:"SH-3907", route:"Rotterdam → Mumbai", carrier:"Maersk", mode:"ocean", prob:0.78 },

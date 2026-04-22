@@ -1,0 +1,19 @@
+@echo off
+echo Starting LogiSense ML System...
+echo.
+
+:: Activate environment and start API
+start "LogiSense API" cmd /k "cd /d C:\Users\Shovin\logistics_ml && conda activate py310 && uvicorn api:app --port 8000"
+
+:: Wait 3 seconds for API to start
+timeout /t 3 /nobreak > nul
+
+:: Open dashboard in browser
+start "" "C:\Users\Shovin\logistics_ml\dashboard.html"
+
+echo.
+echo LogiSense is running!
+echo API:       http://localhost:8000
+echo Dashboard: opening in browser...
+echo.
+pause

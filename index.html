@@ -231,7 +231,7 @@ footer{background:#0f1a2e;padding:60px 24px 32px}
     <div class="contact-form">
       <div class="contact-form-title">Send us a message</div>
       <div class="contact-form-sub">Fill in the form and we'll get back to you shortly.</div>
-      <div class="form-success" id="form-success">✅ Message sent! We'll reply within 24 hours.</div>
+      <div class="form-success" id="form-success">✅ Message sent! We'll reply to your email within 24 hours.</div>
       <form id="contact-form" onsubmit="handleSubmit(event)">
         <div class="form-row">
           <div class="form-group"><label>First name</label><input type="text" name="first_name" placeholder="John" required/></div>
@@ -285,15 +285,53 @@ footer{background:#0f1a2e;padding:60px 24px 32px}
 <script>
 function handleSubmit(e) {
   e.preventDefault();
+  const btn  = document.getElementById("submit-btn");
+  const succ = document.getElementById("form-success");
   const form = document.getElementById("contact-form");
   const data = new FormData(form);
-  const name = data.get("first_name") + " " + data.get("last_name");
-  const email = data.get("email");
-  const company = data.get("company") || "";
-  const msg = data.get("message");
-  const subject = encodeURIComponent("LogiSense inquiry from " + name);
-  const body = encodeURIComponent("Name: " + name + "\nEmail: " + email + "\nCompany: " + company + "\n\nMessage:\n" + msg);
-  window.location.href = "mailto:shovinpais587@gmail.com?subject=" + subject + "&body=" + body;
+  const name    = data.get("first_name") + " " + data.get("last_name");
+  const email   = data.get("email");
+  const company = data.get("company") || "Not provided";
+  const interest= data.get("interest") || "Not specified";
+  const msg     = data.get("message");
+
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+
+  fetch("https://formspree.io/f/mqabrypw", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: name,
+      email: email,
+      company: company,
+      interest: interest,
+      message: msg,
+      _replyto: email,
+      _subject: "LogiSense inquiry from " + name
+    })
+  })
+  .then(function(res) {
+    if(res.ok){
+      form.style.display = "none";
+      succ.classList.add("show");
+    } else {
+      // Fallback - open email client
+      var subject = encodeURIComponent("LogiSense inquiry from " + name);
+      var body    = encodeURIComponent("Name: " + name + "\nEmail: " + email + "\nCompany: " + company + "\n\nMessage:\n" + msg);
+      window.open("mailto:shovinpais587@gmail.com?subject=" + subject + "&body=" + body);
+      form.style.display = "none";
+      succ.classList.add("show");
+    }
+  })
+  .catch(function() {
+    // Fallback - open email client
+    var subject = encodeURIComponent("LogiSense inquiry from " + name);
+    var body    = encodeURIComponent("Name: " + name + "\nEmail: " + email + "\nCompany: " + company + "\n\nMessage:\n" + msg);
+    window.open("mailto:shovinpais587@gmail.com?subject=" + subject + "&body=" + body);
+    form.style.display = "none";
+    succ.classList.add("show");
+  });
 }
 </script>
 </body>

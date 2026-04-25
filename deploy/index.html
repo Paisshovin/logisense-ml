@@ -283,17 +283,17 @@ footer{background:#0f1a2e;padding:60px 24px 32px}
 </footer>
 
 <script>
-async function handleSubmit(e) {
+function handleSubmit(e) {
   e.preventDefault();
-  const btn=document.getElementById("submit-btn");
-  const form=document.getElementById("contact-form");
-  const succ=document.getElementById("form-success");
-  btn.disabled=true; btn.textContent="Sending...";
-  try {
-    const res=await fetch("https://formspree.io/f/xzbwqgnr",{method:"POST",body:new FormData(form),headers:{"Accept":"application/json"}});
-    if(res.ok){form.style.display="none";succ.classList.add("show");}
-    else throw new Error();
-  } catch{btn.disabled=false;btn.textContent="Send message →";alert("Something went wrong. Please try again.");}
+  const form = document.getElementById("contact-form");
+  const data = new FormData(form);
+  const name = data.get("first_name") + " " + data.get("last_name");
+  const email = data.get("email");
+  const company = data.get("company") || "";
+  const msg = data.get("message");
+  const subject = encodeURIComponent("LogiSense inquiry from " + name);
+  const body = encodeURIComponent("Name: " + name + "\nEmail: " + email + "\nCompany: " + company + "\n\nMessage:\n" + msg);
+  window.location.href = "mailto:shovinpais587@gmail.com?subject=" + subject + "&body=" + body;
 }
 </script>
 </body>

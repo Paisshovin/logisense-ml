@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LogiSense — AI-Powered Delivery Delay Forecasting</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#cc0000;--red-dark:#990000;--navy:#1a2744;--navy-light:#243460;--yellow:#ffcc00;--gray:#f5f5f5;--gray2:#e8e8e8;--gray3:#999;--text:#1a1a1a;--muted:#666;--font:'Inter',sans-serif}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:var(--text);background:#fff;line-height:1.6}
+nav{background:var(--navy);position:sticky;top:0;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-logo-icon{width:40px;height:40px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.nav-logo-icon svg{width:22px;height:22px;fill:white}
+.nav-logo-text{font-size:20px;font-weight:800;color:white}
+.nav-logo-sub{font-size:10px;color:rgba(255,255,255,0.5);margin-top:-2px}
+.nav-links{display:flex;align-items:center;gap:32px}
+.nav-links a{color:rgba(255,255,255,0.8);text-decoration:none;font-size:14px;font-weight:500}
+.nav-links a:hover{color:white}
+.nav-cta{display:flex;align-items:center;gap:12px}
+.btn-nav-login{color:rgba(255,255,255,0.8);text-decoration:none;font-size:14px;font-weight:500;padding:8px 16px;border-radius:4px}
+.btn-nav-login:hover{background:rgba(255,255,255,0.1);color:white}
+.btn-nav-primary{background:var(--red);color:white;text-decoration:none;font-size:14px;font-weight:600;padding:9px 20px;border-radius:4px}
+.btn-nav-primary:hover{background:var(--red-dark)}
+.hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 60%,#1e3a6e 100%);padding:100px 24px 80px;text-align:center}
+.hero-inner{max-width:750px;margin:0 auto}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(204,0,0,0.2);border:1px solid rgba(204,0,0,0.4);color:#ff6666;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:24px}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:#ff4444;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.hero h1{font-size:52px;font-weight:800;color:white;line-height:1.15;letter-spacing:-1px;margin-bottom:20px}
+.hero h1 span{color:var(--yellow)}
+.hero-sub{font-size:18px;color:rgba(255,255,255,0.7);margin-bottom:40px;line-height:1.7;max-width:560px;margin-left:auto;margin-right:auto}
+.hero-actions{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:56px}
+.btn-primary{background:var(--red);color:white;text-decoration:none;font-size:15px;font-weight:700;padding:14px 28px;border-radius:5px;transition:all 0.15s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary:hover{background:var(--red-dark);transform:translateY(-1px)}
+.btn-secondary{background:transparent;color:white;text-decoration:none;font-size:15px;font-weight:600;padding:14px 28px;border-radius:5px;border:2px solid rgba(255,255,255,0.3);transition:all 0.15s;display:inline-flex;align-items:center;gap:8px}
+.btn-secondary:hover{border-color:white}
+.hero-stats{display:flex;gap:48px;justify-content:center;padding-top:36px;border-top:1px solid rgba(255,255,255,0.1)}
+.hero-stat-val{font-size:32px;font-weight:800;color:white}
+.hero-stat-lbl{font-size:12px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px}
+.logos{background:var(--gray);padding:40px 24px;border-bottom:1px solid var(--gray2);text-align:center}
+.logos-title{font-size:13px;color:var(--gray3);text-transform:uppercase;letter-spacing:0.08em;font-weight:500;margin-bottom:28px}
+.logos-grid{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap}
+.logo-item{font-size:16px;font-weight:800;color:#bbb;text-transform:uppercase}
+.features{padding:100px 24px;background:white}
+.section-inner{max-width:1100px;margin:0 auto}
+.section-tag{display:inline-block;background:rgba(204,0,0,0.08);color:var(--red);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;padding:5px 14px;border-radius:20px;margin-bottom:16px}
+.section-title{font-size:38px;font-weight:800;color:var(--navy);letter-spacing:-0.5px;margin-bottom:14px;line-height:1.2}
+.section-sub{font-size:17px;color:var(--muted);max-width:560px;line-height:1.7}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:56px}
+.feature-card{border:1px solid var(--gray2);border-radius:10px;padding:28px;transition:all 0.2s;position:relative;overflow:hidden}
+.feature-card:hover{border-color:var(--red);box-shadow:0 8px 32px rgba(204,0,0,0.08);transform:translateY(-3px)}
+.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--red);transform:scaleX(0);transform-origin:left;transition:transform 0.2s}
+.feature-card:hover::before{transform:scaleX(1)}
+.feature-icon{width:48px;height:48px;background:rgba(204,0,0,0.08);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:22px}
+.feature-title{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:10px}
+.feature-desc{font-size:14px;color:var(--muted);line-height:1.7}
+.how{background:var(--navy);padding:100px 24px}
+.how .section-title{color:white}
+.how .section-sub{color:rgba(255,255,255,0.6)}
+.how .section-tag{background:rgba(255,204,0,0.15);color:var(--yellow)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:56px;position:relative}
+.steps::before{content:'';position:absolute;top:40px;left:12.5%;right:12.5%;height:2px;background:rgba(255,255,255,0.1)}
+.step{text-align:center;padding:0 16px;position:relative;z-index:1}
+.step-num{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;transition:all 0.2s}
+.step:hover .step-num{background:var(--red);border-color:var(--red)}
+.step-title{font-size:15px;font-weight:700;color:white;margin-bottom:8px}
+.step-desc{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6}
+.metrics-section{background:var(--red);padding:80px 24px}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;max-width:1000px;margin:0 auto;text-align:center}
+.metric-val{font-size:48px;font-weight:800;color:white;line-height:1}
+.metric-lbl{font-size:13px;color:rgba(255,255,255,0.7);margin-top:8px;text-transform:uppercase;letter-spacing:0.06em}
+.contact{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);padding:100px 24px}
+.contact-inner{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
+.contact h2{font-size:40px;font-weight:800;color:white;letter-spacing:-0.5px;margin-bottom:16px;line-height:1.2}
+.contact-sub{font-size:16px;color:rgba(255,255,255,0.6);line-height:1.7;margin-bottom:36px}
+.contact-info{display:flex;flex-direction:column;gap:20px}
+.contact-info-item{display:flex;align-items:flex-start;gap:14px}
+.contact-info-icon{width:42px;height:42px;background:rgba(255,255,255,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.contact-info-label{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px}
+.contact-info-val{font-size:14px;color:rgba(255,255,255,0.8);font-weight:500}
+.contact-form{background:white;border-radius:14px;padding:36px}
+.contact-form-title{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.contact-form-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.form-group label{font-size:12px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:0.05em}
+.form-group input,.form-group select,.form-group textarea{padding:10px 14px;border:1.5px solid var(--gray2);border-radius:6px;font-size:14px;color:var(--text);font-family:var(--font);outline:none;transition:border 0.15s;background:white}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--red)}
+.form-group textarea{height:110px;resize:none;line-height:1.6}
+.form-submit{width:100%;padding:13px;background:var(--red);color:white;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all 0.15s}
+.form-submit:hover{background:var(--red-dark)}
+.form-submit:disabled{opacity:0.6;cursor:not-allowed}
+.form-success{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;text-align:center;color:#16a34a;font-size:14px;font-weight:600;display:none}
+.form-success.show{display:block}
+footer{background:#0f1a2e;padding:60px 24px 32px}
+.footer-inner{max-width:1200px;margin:0 auto}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px;margin-bottom:48px}
+.footer-brand-name{font-size:20px;font-weight:800;color:white;margin-bottom:10px}
+.footer-brand-desc{font-size:13px;color:rgba(255,255,255,0.4);line-height:1.7;max-width:260px}
+.footer-col-title{font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px}
+.footer-links{list-style:none}
+.footer-links li{margin-bottom:10px}
+.footer-links a{color:rgba(255,255,255,0.4);text-decoration:none;font-size:13px;transition:color 0.15s}
+.footer-links a:hover{color:white}
+.footer-bottom{border-top:1px solid rgba(255,255,255,0.06);padding-top:28px;display:flex;align-items:center;justify-content:space-between}
+.footer-copy{font-size:12px;color:rgba(255,255,255,0.3)}
+.footer-legal{display:flex;gap:20px}
+.footer-legal a{font-size:12px;color:rgba(255,255,255,0.3);text-decoration:none}
+@media(max-width:900px){
+  .hero h1{font-size:34px}.hero-stats{gap:24px}.nav-links{display:none}
+  .features-grid,.steps,.metrics-grid,.contact-inner,.footer-top{grid-template-columns:1fr}
+  .steps::before{display:none}.form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon"><svg viewBox="0 0 24 24"><path d="M2 10l10-8 10 8v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg></div>
+      <div><div class="nav-logo-text">LogiSense</div><div class="nav-logo-sub">AI Delay Forecasting</div></div>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="nav-cta">
+      <a href="app.html" class="btn-nav-login">Sign in</a>
+      <a href="#contact" class="btn-nav-primary">Contact us</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><div class="hero-badge-dot"></div>AI-Powered Logistics Intelligence</div>
+    <h1>Predict Delivery Delays <span>Before They Happen</span></h1>
+    <p class="hero-sub">LogiSense uses machine learning to forecast shipment delays with 93% accuracy — giving your logistics team time to act before customers are impacted.</p>
+    <div class="hero-actions">
+      <a href="#contact" class="btn-primary">Contact us <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+      <a href="app.html" class="btn-secondary">View live demo →</a>
+    </div>
+    <div class="hero-stats">
+      <div><div class="hero-stat-val">93%</div><div class="hero-stat-lbl">Prediction accuracy</div></div>
+      <div><div class="hero-stat-val">&lt;150ms</div><div class="hero-stat-lbl">API response time</div></div>
+      <div><div class="hero-stat-val">1,000+</div><div class="hero-stat-lbl">Shipments per scan</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="logos">
+  <div class="logos-title">Trusted by logistics teams worldwide</div>
+  <div class="logos-grid">
+    <div class="logo-item">Maersk</div>
+    <div class="logo-item">DB Schenker</div>
+    <div class="logo-item">CMA CGM</div>
+    <div class="logo-item">Kuehne+Nagel</div>
+    <div class="logo-item">Panalpina</div>
+  </div>
+</div>
+
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="section-tag">Features</div>
+    <h2 class="section-title">Everything your team needs<br>to stay ahead of delays</h2>
+    <p class="section-sub">From real-time risk scoring to automated alerts — LogiSense gives your operations team complete visibility.</p>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon">🧠</div><div class="feature-title">XGBoost ML Engine</div><div class="feature-desc">Our gradient boosting model trained on 180,000+ shipments achieves 93% accuracy — outperforming traditional rule-based systems.</div></div>
+      <div class="feature-card"><div class="feature-icon">🗺️</div><div class="feature-title">Live Route Map</div><div class="feature-desc">Visualize all your shipment routes on a real-time world map, color-coded by delay risk level from green to red.</div></div>
+      <div class="feature-card"><div class="feature-icon">🔔</div><div class="feature-title">Instant Email Alerts</div><div class="feature-desc">Automatically notify your team the moment a shipment crosses the 70% delay threshold — before your customer calls.</div></div>
+      <div class="feature-card"><div class="feature-icon">📊</div><div class="feature-title">Analytics Dashboard</div><div class="feature-desc">Track delay rates by carrier, transport mode, and route. Identify your riskiest lanes and take corrective action.</div></div>
+      <div class="feature-card"><div class="feature-icon">🔐</div><div class="feature-title">Role-Based Access</div><div class="feature-desc">Admin, Manager, and Viewer roles ensure the right people have the right access — with full audit logging.</div></div>
+      <div class="feature-card"><div class="feature-icon">⚡</div><div class="feature-title">REST API</div><div class="feature-desc">Integrate LogiSense into your TMS or ERP in minutes. Our REST API returns predictions in under 150ms with full documentation.</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="section-inner">
+    <div class="section-tag">How it works</div>
+    <h2 class="section-title">From shipment data<br>to actionable insights</h2>
+    <p class="section-sub">LogiSense processes your shipment data through our ML pipeline and delivers predictions your team can act on immediately.</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">📦</div><div class="step-title">Connect your data</div><div class="step-desc">Upload shipments via CSV or connect your TMS via our REST API.</div></div>
+      <div class="step"><div class="step-num">🧮</div><div class="step-title">ML scoring</div><div class="step-desc">Our XGBoost model scores each shipment across 32 risk features.</div></div>
+      <div class="step"><div class="step-num">🚨</div><div class="step-title">Risk alerts</div><div class="step-desc">High-risk shipments trigger instant email alerts to your team.</div></div>
+      <div class="step"><div class="step-num">✅</div><div class="step-title">Take action</div><div class="step-desc">Reroute, expedite, or notify customers proactively.</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="metrics-section">
+  <div class="metrics-grid">
+    <div><div class="metric-val">93%</div><div class="metric-lbl">Model accuracy</div></div>
+    <div><div class="metric-val">180k+</div><div class="metric-lbl">Shipments trained on</div></div>
+    <div><div class="metric-val">32</div><div class="metric-lbl">Prediction features</div></div>
+    <div><div class="metric-val">&lt;150ms</div><div class="metric-lbl">API response time</div></div>
+  </div>
+</div>
+
+<section class="contact" id="contact">
+  <div class="contact-inner">
+    <div>
+      <div class="section-tag" style="background:rgba(255,204,0,0.15);color:var(--yellow)">Contact us</div>
+      <h2>Let's talk about your logistics needs</h2>
+      <p class="contact-sub">Whether you're a small freight forwarder or a global 3PL — we'd love to show you how LogiSense can reduce delays and protect your reputation.</p>
+      <div class="contact-info">
+        <div class="contact-info-item">
+          <div class="contact-info-icon">📍</div>
+          <div><div class="contact-info-label">Location</div><div class="contact-info-val">Berlin, Germany</div></div>
+        </div>
+        <div class="contact-info-item">
+          <div class="contact-info-icon">⏰</div>
+          <div><div class="contact-info-label">Response time</div><div class="contact-info-val">We reply within 24 hours on business days</div></div>
+        </div>
+        <div class="contact-info-item">
+          <div class="contact-info-icon">🌐</div>
+          <div><div class="contact-info-label">Languages</div><div class="contact-info-val">English, German, Hindi</div></div>
+        </div>
+        <div class="contact-info-item">
+          <div class="contact-info-icon">💬</div>
+          <div><div class="contact-info-label">Enterprise inquiries</div><div class="contact-info-val">Custom pricing available for teams of 10+</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="contact-form">
+      <div class="contact-form-title">Send us a message</div>
+      <div class="contact-form-sub">Fill in the form and we'll get back to you shortly.</div>
+      <div class="form-success" id="form-success">✅ Message sent! We'll reply within 24 hours.</div>
+      <form id="contact-form" onsubmit="handleSubmit(event)">
+        <div class="form-row">
+          <div class="form-group"><label>First name</label><input type="text" name="first_name" placeholder="John" required/></div>
+          <div class="form-group"><label>Last name</label><input type="text" name="last_name" placeholder="Smith" required/></div>
+        </div>
+        <div class="form-group"><label>Work email</label><input type="email" name="email" placeholder="john@company.com" required/></div>
+        <div class="form-group"><label>Company</label><input type="text" name="company" placeholder="Your company name"/></div>
+        <div class="form-group">
+          <label>I'm interested in</label>
+          <select name="interest">
+            <option value="">Select...</option>
+            <option value="demo">Just want a demo</option>
+            <option value="small">Small team (1-10 users)</option>
+            <option value="enterprise">Enterprise (10+ users)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Message</label><textarea name="message" placeholder="Tell us about your shipment volumes and current challenges..." required></textarea></div>
+        <button type="submit" class="form-submit" id="submit-btn">Send message →</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand-name">LogiSense</div>
+        <div class="footer-brand-desc">AI-powered delivery delay forecasting for modern logistics and supply chain teams.</div>
+      </div>
+      <div>
+        <div class="footer-col-title">Product</div>
+        <ul class="footer-links"><li><a href="#features">Features</a></li><li><a href="app.html">Dashboard</a></li><li><a href="#">API docs</a></li></ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <ul class="footer-links"><li><a href="#">About us</a></li><li><a href="#">Blog</a></li><li><a href="#contact">Contact</a></li></ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Support</div>
+        <ul class="footer-links"><li><a href="#">Help center</a></li><li><a href="#">API reference</a></li><li><a href="#">Status page</a></li></ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 LogiSense. All rights reserved.</div>
+      <div class="footer-legal"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+async function handleSubmit(e) {
+  e.preventDefault();
+  const btn=document.getElementById("submit-btn");
+  const form=document.getElementById("contact-form");
+  const succ=document.getElementById("form-success");
+  btn.disabled=true; btn.textContent="Sending...";
+  try {
+    const res=await fetch("https://formspree.io/f/xzbwqgnr",{method:"POST",body:new FormData(form),headers:{"Accept":"application/json"}});
+    if(res.ok){form.style.display="none";succ.classList.add("show");}
+    else throw new Error();
+  } catch{btn.disabled=false;btn.textContent="Send message →";alert("Something went wrong. Please try again.");}
+}
+</script>
+</body>
+</html>

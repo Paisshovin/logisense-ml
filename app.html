@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LogiSense — Login</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0f1e;--surface:#111827;--card:#1a2235;--border:rgba(255,255,255,0.07);
+  --accent:#3b82f6;--accent2:#06b6d4;--danger:#ef4444;--warn:#f59e0b;--success:#10b981;
+  --text:#f1f5f9;--muted:#64748b;--font:'Segoe UI',sans-serif;--mono:'Courier New',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+
+/* LOGIN PAGE */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
+.login-page::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.08) 0%,transparent 70%);top:-100px;right:-100px}
+.login-page::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,0.06) 0%,transparent 70%);bottom:-50px;left:-50px}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:420px;position:relative;z-index:1}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;justify-content:center}
+.login-logo-icon{width:44px;height:44px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.login-logo-icon svg{width:24px;height:24px;fill:white}
+.login-title{font-size:22px;font-weight:700}
+.login-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.login-form-title{font-size:18px;font-weight:600;margin-bottom:6px}
+.login-form-sub{font-size:12px;color:var(--muted);margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;font-family:var(--mono)}
+.form-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;transition:border 0.15s}
+.form-input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity 0.15s;font-family:var(--font);margin-top:8px}
+.login-btn:hover{opacity:0.88}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed}
+.login-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;padding:10px 14px;border-radius:7px;font-size:12px;margin-bottom:16px;font-family:var(--mono)}
+.login-hint{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);border-radius:8px;padding:14px;margin-top:20px}
+.login-hint-title{font-size:11px;color:var(--accent);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em}
+.login-hint-row{display:flex;justify-content:space-between;font-size:11px;font-family:var(--mono);padding:3px 0;color:var(--muted)}
+.login-hint-row span:last-child{color:var(--text)}
+
+/* MAIN APP */
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.main{padding:28px 32px;overflow-y:auto}
+.logo{padding:0 20px 28px;border-bottom:1px solid var(--border)}
+.logo-mark{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:20px;height:20px;fill:white}
+.logo-name{font-size:18px;font-weight:700}
+.logo-sub{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.nav{padding:20px 12px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--muted);transition:all 0.15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.nav-item.active{background:rgba(59,130,246,0.15);color:var(--accent)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-section{font-size:10px;color:var(--muted);padding:12px 12px 6px;letter-spacing:0.08em;text-transform:uppercase;font-family:var(--mono)}
+.nav-item.disabled{opacity:0.3;cursor:not-allowed;pointer-events:none}
+
+/* User info in sidebar */
+.user-info{padding:16px 20px;border-top:1px solid var(--border);margin-top:auto}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.user-details{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;font-family:var(--mono)}
+.role-admin{color:#f87171}
+.role-manager{color:#fbbf24}
+.role-viewer{color:#34d399}
+.logout-btn{font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline;margin-top:4px;display:block}
+.logout-btn:hover{color:var(--danger)}
+
+/* Role badge */
+.role-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-family:var(--mono);font-weight:600;text-transform:uppercase;margin-left:auto}
+.role-badge.admin{background:rgba(239,68,68,0.15);color:#f87171}
+.role-badge.manager{background:rgba(245,158,11,0.15);color:#fbbf24}
+.role-badge.viewer{background:rgba(16,185,129,0.15);color:#34d399}
+
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.metric-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.metric-label{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px}
+.metric-value{font-size:28px;font-weight:700;line-height:1}
+.metric-delta{font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--mono)}
+
+/* Cards */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-family:var(--mono);margin-bottom:16px}
+#embedded-map{height:calc(100vh - 280px);min-height:420px;width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.map-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.map-stats-row{display:flex;gap:16px;margin-bottom:12px}
+.map-stat-pill{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-family:var(--mono)}
+.map-stat-dot{width:8px;height:8px;border-radius:50%}
+.leaflet-container{background:#f0f4f8 !important}
+.leaflet-tooltip{background:white;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;font-family:var(--mono);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.leaflet-tooltip::before{display:none}
+.map-legend-box{position:absolute;bottom:20px;left:20px;z-index:1000;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.scan-btn-map{background:var(--accent);color:white;border:none;border-radius:7px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.scan-btn-map:disabled{opacity:0.5;cursor:not-allowed}
+
+/* Access denied */
+.access-denied{text-align:center;padding:60px 20px}
+.access-denied-icon{font-size:48px;margin-bottom:16px}
+.access-denied-title{font-size:18px;font-weight:600;margin-bottom:8px}
+.access-denied-sub{font-size:13px;color:var(--muted);font-family:var(--mono)}
+
+/* Predict form */
+.predict-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.form-group-sm{display:flex;flex-direction:column;gap:5px}
+.form-label-sm{font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.05em}
+.form-control{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;width:100%}
+.form-control:focus{border-color:var(--accent)}
+select.form-control option{background:var(--surface)}
+.predict-btn{width:100%;padding:11px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:opacity 0.15s}
+.predict-btn:hover{opacity:0.88}
+.result-panel{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center}
+.result-prob{font-size:48px;font-weight:700;line-height:1;font-family:var(--mono)}
+.placeholder-msg{color:var(--muted);font-size:13px;padding:40px 0;font-family:var(--mono)}
+
+/* Users table */
+.users-table{width:100%;border-collapse:collapse;font-size:12px}
+.users-table th{padding:10px 12px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);font-family:var(--mono)}
+.users-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.users-table tr:last-child td{border-bottom:none}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.page-title{font-size:22px;font-weight:700}
+.page-sub{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:blink 2s infinite;margin-left:auto}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;font-family:var(--mono)}
+.badge-high{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
+.badge-medium{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.2)}
+.badge-low{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.2)}
+.ship-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.ship-row:last-child{border-bottom:none}
+.ship-id{font-family:var(--mono);font-weight:500;color:var(--accent2);flex:0 0 70px}
+.ship-route{color:var(--muted);flex:1}
+.prob-bar-wrap{flex:0 0 70px}
+.prob-bar{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+.prob-fill{height:100%;border-radius:2px}
+.ship-prob{flex:0 0 38px;text-align:right;font-family:var(--mono);font-size:11px}
+.factor-item{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--muted);margin-bottom:5px;font-family:var(--mono)}
+.factor-dot{width:5px;height:5px;border-radius:50%;background:var(--warn);margin-top:4px;flex-shrink:0}
+.rec-box{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);border-radius:7px;padding:10px 12px;font-size:11px;color:var(--accent);text-align:left;margin-top:10px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+const API = "https://web-production-d0f39.up.railway.app";
+
+const SHIPMENTS = [
+  {id:"SH-4821",route:"Shanghai → Chicago",mode:"ocean",prob:0.91},
+  {id:"SH-3907",route:"Rotterdam → Mumbai",mode:"ocean",prob:0.78},
+  {id:"SH-5512",route:"Hamburg → Tokyo",  mode:"rail", prob:0.71},
+  {id:"SH-2244",route:"LA → Frankfurt",   mode:"air",  prob:0.63},
+  {id:"SH-6103",route:"Singapore → London",mode:"ocean",prob:0.54},
+  {id:"SH-1198",route:"Mumbai → Chicago", mode:"air",  prob:0.32},
+];
+
+function riskColor(p){return p>=0.7?"#ef4444":p>=0.35?"#f59e0b":"#10b981"}
+function riskLevel(p){return p>=0.7?"HIGH":p>=0.35?"MEDIUM":"LOW"}
+function badgeClass(p){return p>=0.7?"badge badge-high":p>=0.35?"badge badge-medium":"badge badge-low"}
+
+// ── LOGIN PAGE ────────────────────────────────
+function LoginPage({ onLogin }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState(null);
+
+  const login = async () => {
+    setLoading(true); setError(null);
+    try {
+      const form = new URLSearchParams();
+      form.append("username", username);
+      form.append("password", password);
+      const res = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Login failed");
+      }
+      const data = await res.json();
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("role",  data.role);
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("full_name", data.full_name);
+      onLogin(data);
+    } catch(e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-box">
+        <div className="login-logo">
+          <div className="login-logo-icon">
+            <svg viewBox="0 0 24 24"><path d="M2 10l10-8 10 8v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg>
+          </div>
+          <div>
+            <div className="login-title">LogiSense</div>
+            <div className="login-sub">ML Delay Forecasting System</div>
+          </div>
+        </div>
+
+        <div className="login-form-title">Sign in</div>
+        <div className="login-form-sub">Enter your credentials to access the dashboard</div>
+
+        {error && <div className="login-error">❌ {error}</div>}
+
+        <div className="form-group">
+          <label className="form-label">Username</label>
+          <input className="form-input" type="text" value={username}
+            onChange={e=>setUsername(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&login()}
+            placeholder="Enter username" autoFocus/>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Password</label>
+          <input className="form-input" type="password" value={password}
+            onChange={e=>setPassword(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&login()}
+            placeholder="Enter password"/>
+        </div>
+        <button className="login-btn" onClick={login} disabled={loading||!username||!password}>
+          {loading ? "Signing in..." : "Sign in →"}
+        </button>
+
+             </div>
+    </div>
+  );
+}
+
+// ── SIDEBAR ───────────────────────────────────
+function Sidebar({ tab, setTab, user, onLogout }) {
+  const isAdmin   = user.role === "admin";
+  const isManager = user.role === "admin" || user.role === "manager";
+
+  const nav = [
+    { id:"dashboard", label:"Dashboard",    icon:<path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"/>, allowed:true },
+    { id:"predict",   label:"Predict",      icon:<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>, allowed:true },
+    { id:"map",       label:"Live Map",     icon:<path d="M3 11l19-9-9 19-2-8-8-2z"/>, allowed:true },
+    { id:"analytics", label:"Analytics",    icon:<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>, allowed:isManager },
+    { id:"users",     label:"User Mgmt",    icon:<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>, allowed:isAdmin },
+  ];
+
+  const initials = (user.full_name||user.username).split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+
+  return (
+    <div className="sidebar">
+      <div className="logo">
+        <div className="logo-mark">
+          <div className="logo-icon">
+            <svg viewBox="0 0 24 24"><path d="M2 10l10-8 10 8v10a2 2 0 01-2 2H4a2 2 0 01-2-2z"/></svg>
+          </div>
+          <div>
+            <div className="logo-name">LogiSense</div>
+            <div className="logo-sub">v2.0 · Secured</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="nav">
+        <div className="nav-section">Navigation</div>
+        {nav.map(n=>(
+          <button key={n.id} className={`nav-item ${tab===n.id?"active":""} ${!n.allowed?"disabled":""}`}
+            onClick={()=>n.allowed&&setTab(n.id)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{n.icon}</svg>
+            {n.label}
+            {!n.allowed && <span style={{fontSize:9,color:"var(--muted)",marginLeft:"auto"}}>locked</span>}
+          </button>
+        ))}
+      </div>
+
+      <div className="user-info">
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+          <div className="user-avatar">{initials}</div>
+          <div className="user-details">
+            <div className="user-name">{user.full_name || user.username}</div>
+            <div className={`user-role role-${user.role}`}>{user.role}</div>
+          </div>
+        </div>
+        <button className="logout-btn" onClick={onLogout}>Sign out</button>
+      </div>
+    </div>
+  );
+}
+
+// ── DASHBOARD TAB ─────────────────────────────
+function Dashboard() {
+  return (
+    <div>
+      <div className="metrics">
+        {[
+          {label:"Active Shipments",value:"342",color:"#3b82f6"},
+          {label:"High Risk",value:"47",color:"#ef4444"},
+          {label:"On-Time Rate",value:"81%",color:"#10b981"},
+          {label:"Model Accuracy",value:"93%",color:"#06b6d4"},
+        ].map(m=>(
+          <div key={m.label} className="metric-card">
+            <div className="metric-label">{m.label}</div>
+            <div className="metric-value" style={{color:m.color}}>{m.value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="card-title">Shipments at risk</div>
+        {SHIPMENTS.map(s=>(
+          <div key={s.id} className="ship-row">
+            <span className="ship-id">{s.id}</span>
+            <span className="ship-route">{s.route} · {s.mode}</span>
+            <div className="prob-bar-wrap">
+              <div className="prob-bar">
+                <div className="prob-fill" style={{width:`${Math.round(s.prob*100)}%`,background:riskColor(s.prob)}}/>
+              </div>
+            </div>
+            <span className="ship-prob" style={{color:riskColor(s.prob)}}>{Math.round(s.prob*100)}%</span>
+            <span className={badgeClass(s.prob)}>{riskLevel(s.prob)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── PREDICT TAB ───────────────────────────────
+function Predict({ token, username }) {
+  const [form, setForm] = useState({
+    shipment_id:"SH-TEST-01", order_date:"2024-11-15",
+    carrier:"MSC", transport_mode:"ocean", cargo_type:"general",
+    customs_complexity:"standard", origin:"Shanghai", destination:"Chicago",
+    weight_kg:2400, distance_km:12500, carrier_otr_30d:0.82,
+    port_congestion:0.55, weather_severity:0.40, planned_lead_days:21, is_peak_season:0,
+  });
+  const [result,    setResult]    = useState(null);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState(null);
+  const [emailSent, setEmailSent] = useState(false);
+
+  const predict = async () => {
+    setLoading(true); setError(null); setResult(null); setEmailSent(false);
+    try {
+      const res = await fetch(`${API}/predict`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+        body: JSON.stringify({...form,
+          weight_kg:parseFloat(form.weight_kg), distance_km:parseFloat(form.distance_km),
+          carrier_otr_30d:parseFloat(form.carrier_otr_30d), port_congestion:parseFloat(form.port_congestion),
+          weather_severity:parseFloat(form.weather_severity), planned_lead_days:parseInt(form.planned_lead_days),
+          is_peak_season:parseInt(form.is_peak_season),
+        })
+      });
+      if (!res.ok) throw new Error((await res.json()).detail);
+      const data = await res.json();
+      setResult(data);
+      if(data.delay_probability >= 0.70) setEmailSent(true);
+    } catch(e) { setError(e.message); }
+    finally    { setLoading(false); }
+  };
+
+  const color = result ? riskColor(result.delay_probability) : "var(--accent)";
+
+  return (
+    <div className="grid2">
+      <div className="card">
+        <div className="card-title">Shipment parameters</div>
+        <div className="predict-grid">
+          {[
+            {k:"shipment_id",l:"Shipment ID",t:"text"},
+            {k:"order_date",l:"Order Date",t:"date"},
+            {k:"origin",l:"Origin",t:"text"},
+            {k:"destination",l:"Destination",t:"text"},
+            {k:"weight_kg",l:"Weight (kg)",t:"number"},
+            {k:"distance_km",l:"Distance (km)",t:"number"},
+            {k:"planned_lead_days",l:"Lead Days",t:"number"},
+            {k:"carrier_otr_30d",l:"Carrier OTR",t:"number"},
+            {k:"port_congestion",l:"Port Congestion",t:"number"},
+            {k:"weather_severity",l:"Weather Risk",t:"number"},
+          ].map(f=>(
+            <div key={f.k} className="form-group-sm">
+              <label className="form-label-sm">{f.l}</label>
+              <input className="form-control" type={f.t} value={form[f.k]}
+                onChange={e=>setForm(x=>({...x,[f.k]:e.target.value}))} step="any"/>
+            </div>
+          ))}
+          {[
+            {k:"carrier",l:"Carrier",opts:["Maersk","MSC","CMA CGM","DHL Express","FedEx","UPS"]},
+            {k:"transport_mode",l:"Mode",opts:["ocean","air","road","rail","multimodal"]},
+            {k:"cargo_type",l:"Cargo",opts:["general","hazmat","perishable","fragile","bulk"]},
+            {k:"customs_complexity",l:"Customs",opts:["standard","complex","high_scrutiny"]},
+            {k:"is_peak_season",l:"Peak Season",opts:["0","1"]},
+          ].map(f=>(
+            <div key={f.k} className="form-group-sm">
+              <label className="form-label-sm">{f.l}</label>
+              <select className="form-control" value={form[f.k]} onChange={e=>setForm(x=>({...x,[f.k]:e.target.value}))}>
+                {f.opts.map(o=><option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+        <button className="predict-btn" onClick={predict} disabled={loading}>
+          {loading ? "Running prediction..." : "Run ML Prediction →"}
+        </button>
+      </div>
+      <div className="card">
+        <div className="card-title">Prediction result</div>
+        {!result && !loading && !error && <div className="placeholder-msg">Fill the form and click predict →</div>}
+        {loading && <div className="placeholder-msg" style={{color:"var(--accent)"}}>⟳ Running XGBoost inference...</div>}
+        {error && <div className="placeholder-msg" style={{color:"var(--danger)"}}>❌ {error}</div>}
+        {result && (
+          <div className="result-panel">
+            <div className="result-prob" style={{color}}>{result.delay_probability_pct}</div>
+            <div style={{fontSize:13,color,marginTop:6,fontWeight:600}}>{result.prediction} · {result.risk_level} RISK</div>
+            <div style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:4}}>
+              Est. delay: {result.estimated_delay_days}d · Confidence: {result.confidence}
+            </div>
+            <div style={{textAlign:"left",marginTop:14}}>
+              {result.key_risk_factors.map((f,i)=>(
+                <div key={i} className="factor-item"><div className="factor-dot"/>{f}</div>
+              ))}
+            </div>
+            <div className="rec-box">💡 {result.recommendation}</div>
+            {emailSent && (
+              <div style={{background:"rgba(16,185,129,0.08)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:7,padding:"8px 12px",fontSize:11,color:"#34d399",textAlign:"left",marginTop:8,fontFamily:"var(--mono)"}}>
+                📧 Alert email sent to your account email
+              </div>
+            )}
+            <div style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:10,textAlign:"left"}}>
+              Predicted by: {result.predicted_by} · {new Date(result.predicted_at).toLocaleTimeString()}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── USER MANAGEMENT (Admin only) ──────────────
+function UserManagement({ token }) {
+  const [users,   setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newUser, setNewUser] = useState({username:"",email:"",full_name:"",password:"",role:"viewer"});
+  const [msg,     setMsg]     = useState(null);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API}/auth/users`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) setUsers(await res.json());
+    } catch(e) {} finally { setLoading(false); }
+  };
+
+  useEffect(()=>{ fetchUsers(); }, []);
+
+  const createUser = async () => {
+    try {
+      const res = await fetch(`${API}/auth/users`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+        body: JSON.stringify(newUser)
+      });
+      if (!res.ok) throw new Error((await res.json()).detail);
+      setMsg("✅ User created successfully!");
+      setNewUser({username:"",email:"",full_name:"",password:"",role:"viewer"});
+      fetchUsers();
+    } catch(e) { setMsg(`❌ ${e.message}`); }
+  };
+
+  const deleteUser = async (username) => {
+    if (!confirm(`Deactivate user "${username}"?`)) return;
+    await fetch(`${API}/auth/users/${username}`, {
+      method:"DELETE", headers:{"Authorization":`Bearer ${token}`}
+    });
+    fetchUsers();
+  };
+
+  return (
+    <div className="grid2">
+      <div className="card">
+        <div className="card-title">All users</div>
+        {loading ? <div style={{color:"var(--muted)",fontSize:12}}>Loading...</div> : (
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>Username</th><th>Full name</th><th>Role</th><th>Last login</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u=>(
+                <tr key={u.username}>
+                  <td style={{fontFamily:"var(--mono)",color:"var(--accent2)"}}>{u.username}</td>
+                  <td>{u.full_name}</td>
+                  <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
+                  <td style={{color:"var(--muted)",fontSize:11}}>{u.last_login ? new Date(u.last_login).toLocaleDateString() : "Never"}</td>
+                  <td>
+                    <button onClick={()=>deleteUser(u.username)}
+                      style={{fontSize:11,color:"var(--danger)",background:"none",border:"none",cursor:"pointer"}}>
+                      Deactivate
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <div className="card">
+        <div className="card-title">Create new user</div>
+        {msg && <div style={{fontSize:12,marginBottom:12,color:msg.startsWith("✅")?"var(--success)":"var(--danger)",fontFamily:"var(--mono)"}}>{msg}</div>}
+        {[
+          {k:"username",l:"Username",t:"text"},
+          {k:"email",l:"Email",t:"email"},
+          {k:"full_name",l:"Full name",t:"text"},
+          {k:"password",l:"Password",t:"password"},
+        ].map(f=>(
+          <div key={f.k} style={{marginBottom:12}}>
+            <label className="form-label-sm">{f.l}</label>
+            <input className="form-control" type={f.t} value={newUser[f.k]}
+              onChange={e=>setNewUser(x=>({...x,[f.k]:e.target.value}))} style={{marginTop:4}}/>
+          </div>
+        ))}
+        <div style={{marginBottom:16}}>
+          <label className="form-label-sm">Role</label>
+          <select className="form-control" value={newUser.role}
+            onChange={e=>setNewUser(x=>({...x,role:e.target.value}))} style={{marginTop:4}}>
+            <option value="viewer">Viewer</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button className="predict-btn" onClick={createUser}
+          disabled={!newUser.username||!newUser.email||!newUser.password}>
+          Create user →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── ANALYTICS (Manager+) ──────────────────────
+function Analytics() {
+  const { useEffect, useRef, useState } = React;
+
+  const carrierChartRef  = useRef(null);
+  const modeChartRef     = useRef(null);
+  const trendChartRef    = useRef(null);
+  const carrierChart     = useRef(null);
+  const modeChart        = useRef(null);
+  const trendChart       = useRef(null);
+
+  // ── Simulated analytics data ──────────────
+  const carrierData = [
+    { name:"MSC",         rate:34, shipments:2841 },
+    { name:"CMA CGM",     rate:27, shipments:3102 },
+    { name:"DB Schenker", rate:22, shipments:1876 },
+    { name:"Maersk",      rate:18, shipments:4210 },
+    { name:"UPS",         rate:14, shipments:2340 },
+    { name:"DHL Express", rate:11, shipments:3890 },
+    { name:"FedEx",       rate:8,  shipments:2980 },
+  ];
+
+  const modeData = [
+    { name:"Ocean",      rate:31, color:"#3b82f6" },
+    { name:"Multimodal", rate:24, color:"#8b5cf6" },
+    { name:"Rail",       rate:18, color:"#06b6d4" },
+    { name:"Road",       rate:14, color:"#f59e0b" },
+    { name:"Air",        rate:7,  color:"#10b981" },
+  ];
+
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const trendDelayed = [18,21,19,24,22,20,25,28,31,38,42,35];
+  const trendOnTime  = [82,79,81,76,78,80,75,72,69,62,58,65];
+
+  const topRoutes = [
+    { route:"Shanghai → Chicago",   prob:0.91, mode:"Ocean",  carrier:"MSC",         count:142 },
+    { route:"Dubai → New York",     prob:0.88, mode:"Ocean",  carrier:"MSC",         count:98  },
+    { route:"São Paulo → London",   prob:0.82, mode:"Ocean",  carrier:"CMA CGM",     count:87  },
+    { route:"Rotterdam → Mumbai",   prob:0.78, mode:"Ocean",  carrier:"Maersk",      count:124 },
+    { route:"Hamburg → Tokyo",      prob:0.71, mode:"Rail",   carrier:"DB Schenker", count:76  },
+    { route:"Singapore → London",   prob:0.64, mode:"Ocean",  carrier:"CMA CGM",     count:109 },
+    { route:"Mumbai → Frankfurt",   prob:0.58, mode:"Air",    carrier:"DHL Express", count:63  },
+    { route:"Sydney → Frankfurt",   prob:0.44, mode:"Air",    carrier:"DB Schenker", count:91  },
+    { route:"LA → Frankfurt",       prob:0.32, mode:"Air",    carrier:"DHL Express", count:178 },
+    { route:"Tokyo → Los Angeles",  prob:0.18, mode:"Ocean",  carrier:"Maersk",      count:203 },
+  ];
+
+  useEffect(()=>{
+    // Carrier chart
+    if(carrierChartRef.current && !carrierChart.current){
+      carrierChart.current = new Chart(carrierChartRef.current,{
+        type:"bar",
+        data:{
+          labels: carrierData.map(c=>c.name),
+          datasets:[{
+            label:"Delay rate %",
+            data: carrierData.map(c=>c.rate),
+            backgroundColor: carrierData.map(c=>c.rate>=25?"rgba(239,68,68,0.7)":c.rate>=15?"rgba(245,158,11,0.7)":"rgba(16,185,129,0.7)"),
+            borderRadius:5, borderSkipped:false,
+          }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false}},
+          scales:{
+            x:{ticks:{color:"#64748b",font:{size:10}},grid:{display:false}},
+            y:{ticks:{color:"#64748b",font:{size:10},callback:v=>v+"%"},grid:{color:"rgba(255,255,255,0.05)"},max:40},
+          }
+        }
+      });
+    }
+
+    // Mode chart
+    if(modeChartRef.current && !modeChart.current){
+      modeChart.current = new Chart(modeChartRef.current,{
+        type:"doughnut",
+        data:{
+          labels: modeData.map(m=>m.name),
+          datasets:[{
+            data: modeData.map(m=>m.rate),
+            backgroundColor: modeData.map(m=>m.color),
+            borderWidth:0, hoverOffset:6,
+          }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{
+            legend:{
+              position:"right",
+              labels:{color:"#64748b",font:{size:11},boxWidth:12,padding:12}
+            }
+          },
+          cutout:"65%",
+        }
+      });
+    }
+
+    // Trend chart
+    if(trendChartRef.current && !trendChart.current){
+      trendChart.current = new Chart(trendChartRef.current,{
+        type:"line",
+        data:{
+          labels: months,
+          datasets:[
+            {label:"Delayed %",data:trendDelayed,borderColor:"#ef4444",borderWidth:2,tension:0.4,pointRadius:4,fill:true,backgroundColor:"rgba(239,68,68,0.06)"},
+            {label:"On Time %",data:trendOnTime, borderColor:"#10b981",borderWidth:2,tension:0.4,pointRadius:4,fill:true,backgroundColor:"rgba(16,185,129,0.06)",borderDash:[5,4]},
+          ]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:"#64748b",font:{size:11},boxWidth:12}}},
+          scales:{
+            x:{ticks:{color:"#64748b",font:{size:10}},grid:{display:false}},
+            y:{ticks:{color:"#64748b",font:{size:10},callback:v=>v+"%"},grid:{color:"rgba(255,255,255,0.05)"},min:0,max:100},
+          }
+        }
+      });
+    }
+
+    return ()=>{
+      if(carrierChart.current){ carrierChart.current.destroy(); carrierChart.current=null; }
+      if(modeChart.current)   { modeChart.current.destroy();   modeChart.current=null;    }
+      if(trendChart.current)  { trendChart.current.destroy();  trendChart.current=null;   }
+    };
+  },[]);
+
+  const riskColor = p=>p>=0.7?"#ef4444":p>=0.35?"#f59e0b":"#10b981";
+  const badgeCls  = p=>p>=0.7?"badge badge-high":p>=0.35?"badge badge-medium":"badge badge-low";
+  const riskLbl   = p=>p>=0.7?"HIGH":p>=0.35?"MED":"LOW";
+
+  return (
+    <div>
+      {/* Summary metrics */}
+      <div className="metrics" style={{marginBottom:16}}>
+        {[
+          {label:"Total Shipments",  value:"18,241", color:"#3b82f6", delta:"Last 12 months"},
+          {label:"Avg Delay Rate",   value:"19.3%",  color:"#ef4444", delta:"↑2.1% vs last year"},
+          {label:"On-Time Rate",     value:"80.7%",  color:"#10b981", delta:"↓2.1% vs last year"},
+          {label:"Avg Delay Days",   value:"3.2d",   color:"#f59e0b", delta:"When delayed"},
+        ].map(m=>(
+          <div key={m.label} className="metric-card">
+            <div className="metric-label">{m.label}</div>
+            <div className="metric-value" style={{color:m.color}}>{m.value}</div>
+            <div className="metric-delta">{m.delta}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Carrier + Mode charts */}
+      <div className="grid2" style={{marginBottom:16}}>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Delay rate by carrier</div>
+            <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>% of shipments delayed</span>
+          </div>
+          <div style={{position:"relative",height:"220px"}}>
+            <canvas ref={carrierChartRef} role="img" aria-label="Bar chart of delay rate by carrier"/>
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12}}>
+            {carrierData.map(c=>(
+              <div key={c.name} style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+                {c.name}: <span style={{color:"var(--text)"}}>{c.shipments.toLocaleString()} ships</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Delay rate by transport mode</div>
+            <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>% share of delays</span>
+          </div>
+          <div style={{position:"relative",height:"220px"}}>
+            <canvas ref={modeChartRef} role="img" aria-label="Doughnut chart of delay rate by transport mode"/>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly trend */}
+      <div className="card" style={{marginBottom:16}}>
+        <div className="card-header">
+          <div className="card-title">Monthly delay trend — 12 months</div>
+          <div style={{display:"flex",gap:16}}>
+            <span style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+              <span style={{width:10,height:10,borderRadius:2,background:"#ef4444",display:"inline-block"}}/>Delayed
+            </span>
+            <span style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+              <span style={{width:10,height:10,borderRadius:2,background:"#10b981",display:"inline-block"}}/>On time
+            </span>
+          </div>
+        </div>
+        <div style={{position:"relative",height:"200px"}}>
+          <canvas ref={trendChartRef} role="img" aria-label="Line chart of monthly delay trends"/>
+        </div>
+        <div style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:10}}>
+          ⚠️ Peak delay months: Oct–Dec (Q4 surge). Lowest delays: Jan–Mar.
+        </div>
+      </div>
+
+      {/* Top high-risk routes */}
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">Top routes by delay risk</div>
+          <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>ML-scored · sorted by probability</span>
+        </div>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead>
+            <tr style={{borderBottom:"1px solid var(--border)"}}>
+              {["Route","Mode","Carrier","Risk","Delay prob","Volume"].map(h=>(
+                <th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {topRoutes.map((r,i)=>(
+              <tr key={i} style={{borderBottom:"1px solid var(--border)"}}>
+                <td style={{padding:"10px",fontFamily:"var(--mono)",color:"var(--accent2)"}}>{r.route}</td>
+                <td style={{padding:"10px",color:"var(--muted)"}}>{r.mode}</td>
+                <td style={{padding:"10px",color:"var(--muted)"}}>{r.carrier}</td>
+                <td style={{padding:"10px"}}><span className={badgeCls(r.prob)}>{riskLbl(r.prob)}</span></td>
+                <td style={{padding:"10px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:60,height:4,background:"rgba(255,255,255,0.07)",borderRadius:2,overflow:"hidden"}}>
+                      <div style={{width:`${Math.round(r.prob*100)}%`,height:"100%",background:riskColor(r.prob),borderRadius:2}}/>
+                    </div>
+                    <span style={{fontFamily:"var(--mono)",fontSize:11,color:riskColor(r.prob)}}>{Math.round(r.prob*100)}%</span>
+                  </div>
+                </td>
+                <td style={{padding:"10px",color:"var(--muted)",fontFamily:"var(--mono)"}}>{r.count} ships/mo</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────
+// ── City coordinates ──────────────────────────
+const COORDS = {
+  "Shanghai":    [31.2304, 121.4737],
+  "Hamburg":     [53.5753, 10.0153],
+  "Rotterdam":   [51.9244, 4.4777],
+  "Singapore":   [1.3521,  103.8198],
+  "Los Angeles": [34.0522, -118.2437],
+  "Dubai":       [25.2048, 55.2708],
+  "Mumbai":      [19.0760, 72.8777],
+  "Tokyo":       [35.6762, 139.6503],
+  "Sydney":      [-33.8688, 151.2093],
+  "São Paulo":   [-23.5505, -46.6333],
+  "Chicago":     [41.8781, -87.6298],
+  "Frankfurt":   [50.1109, 8.6821],
+  "London":      [51.5074, -0.1278],
+  "New York":    [40.7128, -74.0060],
+};
+
+// ── Map constants ─────────────────────────────
+function LiveMapTab({ token }) {
+  const mapRef   = useRef(null);
+  const leafRef  = useRef(null);
+  const linesRef = useRef([]);
+  const mkRef    = useRef([]);
+  const [scanning, setScanning] = useState(false);
+  const [stats,    setStats]    = useState({high:0,med:0,low:0,total:0});
+  const [status,   setStatus]   = useState("Click Scan to load routes");
+
+  const COORDS = {
+    "Shanghai":[31.23,121.47],"Hamburg":[53.58,10.02],"Rotterdam":[51.92,4.48],
+    "Singapore":[1.35,103.82],"Los Angeles":[34.05,-118.24],"Dubai":[25.20,55.27],
+    "Mumbai":[19.08,72.88],"Tokyo":[35.68,139.65],"Sydney":[-33.87,151.21],
+    "Sao Paulo":[-23.55,-46.63],"Chicago":[41.88,-87.63],"Frankfurt":[50.11,8.68],
+    "London":[51.51,-0.13],"New York":[40.71,-74.01],
+  };
+  const CITIES = Object.keys(COORDS);
+  function sr(s){let x=Math.sin(s+1)*10000;return x-Math.floor(x);}
+  const POOL = Array.from({length:500},(_,i)=>({
+    shipment_id:"SH-"+(10000+i),
+    origin:CITIES[Math.floor(sr(i)*CITIES.length)],
+    destination:CITIES[Math.floor(sr(i+1000)*CITIES.length)],
+    carrier:["Maersk","MSC","CMA CGM","DHL","FedEx"][Math.floor(sr(i+2000)*5)],
+    transport_mode:["ocean","air","road","rail"][Math.floor(sr(i+3000)*4)],
+    cargo_type:["general","hazmat","perishable","fragile"][Math.floor(sr(i+4000)*4)],
+    customs_complexity:["standard","complex","high_scrutiny"][Math.floor(sr(i+5000)*3)],
+    weight_kg:Math.round(50+sr(i+6000)*9950),
+    distance_km:Math.round(500+sr(i+7000)*17500),
+    carrier_otr_30d:Math.round((0.6+sr(i+8000)*0.4)*1000)/1000,
+    port_congestion:Math.round(sr(i+9000)*1000)/1000,
+    weather_severity:Math.round(sr(i+10000)*1000)/1000,
+    planned_lead_days:Math.round(3+sr(i+11000)*27),
+    is_peak_season:sr(i+12000)>0.7?1:0,
+  }));
+
+  useEffect(()=>{
+    // Use multiple retries to ensure map renders after tab becomes visible
+    const initMap = () => {
+      if(!mapRef.current) return;
+      if(leafRef.current){
+        leafRef.current.invalidateSize();
+        return;
+      }
+      const m = L.map(mapRef.current,{center:[25,15],zoom:2,zoomControl:true,attributionControl:false,minZoom:1,maxZoom:7});
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(m);
+      leafRef.current = m;
+      // Multiple invalidateSize calls to handle tab visibility delay
+      [200,500,1000,2000].forEach(ms=>setTimeout(()=>m.invalidateSize(),ms));
+    };
+    // Small delay to ensure DOM is ready
+    const t = setTimeout(initMap, 100);
+    return ()=>{
+      clearTimeout(t);
+      if(leafRef.current){leafRef.current.remove();leafRef.current=null;}
+    };
+  },[]);
+
+  const doScan = async () => {
+    if(scanning||!leafRef.current) return;
+    setScanning(true); setStatus("Scanning 500 shipments...");
+    const vary=s=>({...s,
+      port_congestion:Math.min(1,Math.max(0,s.port_congestion+(Math.random()-0.5)*0.15)),
+      weather_severity:Math.min(1,Math.max(0,s.weather_severity+(Math.random()-0.5)*0.12)),
+    });
+    try {
+      const r = await fetch(API+"/predict/batch",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({shipments:POOL.map(vary)})
+      });
+      if(!r.ok) throw new Error("API error "+r.status);
+      const d = await r.json();
+      const map = leafRef.current;
+      linesRef.current.forEach(l=>map.removeLayer(l)); linesRef.current=[];
+      mkRef.current.forEach(m=>map.removeLayer(m)); mkRef.current=[];
+      const cc={};
+      d.predictions.forEach((res,i)=>{
+        const s=POOL[i]; if(!s) return;
+        const oC=COORDS[s.origin]; const dC=COORDS[s.destination];
+        if(!oC||!dC||s.origin===s.destination) return;
+        const p=res.delay_probability;
+        const col=p>=0.7?"#dc2626":p>=0.35?"#d97706":"#16a34a";
+        const ln=L.polyline([oC,dC],{color:col,weight:p>=0.7?2:p>=0.35?1.2:0.7,opacity:p>=0.7?0.8:p>=0.35?0.5:0.25,dashArray:p>=0.7?"8,4":p>=0.35?"5,6":"3,8"}).addTo(map);
+        ln.bindTooltip("<b>"+s.shipment_id+"</b><br>"+s.origin+" → "+s.destination+"<br>"+Math.round(p*100)+"% risk",{sticky:true});
+        linesRef.current.push(ln);
+        cc[s.origin]=(cc[s.origin]||0)+1; cc[s.destination]=(cc[s.destination]||0)+1;
+      });
+      Object.entries(COORDS).forEach(([city,[lat,lng]])=>{
+        if(!cc[city]) return;
+        const m=L.circleMarker([lat,lng],{radius:Math.min(8,3+Math.log2(cc[city])),color:"white",fillColor:"#2563eb",fillOpacity:0.9,weight:2}).addTo(map);
+        m.bindTooltip("<b>"+city+"</b><br>"+cc[city]+" shipments",{sticky:true});
+        mkRef.current.push(m);
+      });
+      const hi=d.predictions.filter(r=>r.delay_probability>=0.7).length;
+      const me=d.predictions.filter(r=>r.delay_probability>=0.35&&r.delay_probability<0.7).length;
+      const lo=d.predictions.filter(r=>r.delay_probability<0.35).length;
+      setStats({high:hi,med:me,low:lo,total:d.predictions.length});
+      setStatus("Last scan: "+new Date().toLocaleTimeString());
+    } catch(e){ setStatus("Error: "+e.message); }
+    finally { setScanning(false); }
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:600}}>Live Shipment Map · 500 routes</div>
+          <div style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:2}}>{status}</div>
+        </div>
+        <button onClick={doScan} disabled={scanning}
+          style={{background:"var(--accent)",color:"white",border:"none",borderRadius:7,padding:"7px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+          {scanning?"Scanning...":"↻ Scan now"}
+        </button>
+      </div>
+      <div style={{display:"flex",gap:12,marginBottom:12}}>
+        {[{l:"High",v:stats.high,c:"#dc2626"},{l:"Medium",v:stats.med,c:"#d97706"},{l:"Low",v:stats.low,c:"#16a34a"},{l:"Total",v:stats.total,c:"#2563eb"}].map(s=>(
+          <div key={s.l} style={{display:"flex",alignItems:"center",gap:6,background:"var(--card)",border:"1px solid var(--border)",borderRadius:8,padding:"6px 14px",fontSize:12,fontFamily:"var(--mono)"}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:s.c}}/>
+            <span style={{color:"var(--muted)"}}>{s.l}</span>
+            <span style={{fontWeight:600,color:s.c}}>{s.v}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{position:"relative",height:"calc(100vh - 300px)",minHeight:420,borderRadius:10,overflow:"hidden",border:"1px solid var(--border)"}}>
+        <div ref={mapRef} style={{height:"100%",width:"100%",background:"#f0f4f8"}}/>
+        <div style={{position:"absolute",bottom:16,left:16,zIndex:1000,background:"white",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 14px",fontSize:11}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#64748b",textTransform:"uppercase",marginBottom:6}}>Risk level</div>
+          {[["#dc2626","High >70%"],["#d97706","Medium 35-70%"],["#16a34a","Low <35%"]].map(([c,l])=>(
+            <div key={l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,fontSize:11}}>
+              <div style={{width:20,height:3,background:c,borderRadius:2}}/>{l}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [user,    setUser]    = useState(null);
+  const [tab,     setTab]     = useState("dashboard");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    // Check if already logged in
+    const token = localStorage.getItem("token");
+    const role  = localStorage.getItem("role");
+    const username = localStorage.getItem("username");
+    const full_name = localStorage.getItem("full_name");
+    if (token && role) {
+      setUser({ access_token:token, role, username, full_name });
+    }
+    setLoading(false);
+  }, []);
+
+  const onLogin = (data) => setUser(data);
+
+  const onLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("username");
+    localStorage.removeItem("full_name");
+    setUser(null);
+    setTab("dashboard");
+  };
+
+  if (loading) return null;
+  if (!user)   return <LoginPage onLogin={onLogin}/>;
+
+  const titles = {
+    dashboard: { title:"Control Tower",   sub:"Real-time shipment risk monitoring" },
+    predict:   { title:"Predict Delay",   sub:"Single shipment ML inference" },
+    map:       { title:"Live Map",        sub:"1,000 shipment routes · color coded by risk" },
+    analytics: { title:"Analytics",       sub:"Fleet performance & trends" },
+    users:     { title:"User Management", sub:"Manage team access and roles" },
+  };
+
+  return (
+    <div className="shell">
+      <Sidebar tab={tab} setTab={setTab} user={user} onLogout={onLogout}/>
+      <div className="main">
+        <div className="topbar">
+          <div>
+            <div className="page-title">{titles[tab]?.title}</div>
+            <div className="page-sub">{titles[tab]?.sub}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span className={`role-badge ${user.role}`}>{user.role}</span>
+            <div style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+              Logged in as {user.username}
+            </div>
+          </div>
+        </div>
+        {tab==="dashboard" && <Dashboard/>}
+        {tab==="predict"   && <Predict token={user.access_token} username={user.username}/>}
+        {tab==="map"       && <LiveMapTab token={user.access_token}/>}
+        {tab==="analytics" && <Analytics/>}
+        {tab==="users"     && <UserManagement token={user.access_token}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

@@ -19,20 +19,153 @@ Default accounts:
 """
 
 import os
+import smtplib
 import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 from auth import (
     router as auth_router,
     get_current_user,
     require_role,
     init_users_db,
 )
+
+load_dotenv()
+
+GMAIL_USER     = os.getenv("GMAIL_USER", "")
+GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD", "")
+
+def send_shipment_alert_email(to_email: str, user_name: str, prediction: dict):
+    """Send single shipment high-risk alert email to the user."""
+    if not GMAIL_USER or not GMAIL_PASSWORD:
+        print("  Email not configured — skipping")
+        return
+
+    sid   = prediction.get("shipment_id","Unknown")
+    prob  = prediction.get("delay_probability", 0)
+    risk  = prediction.get("risk_level","HIGH")
+    est   = prediction.get("estimated_delay_days", 0)
+    rec   = prediction.get("recommendation","")
+    facts = prediction.get("key_risk_factors",[])
+    color = "#ef4444" if risk=="HIGH" else "#f59e0b"
+    facts_html = "".join(f"<li style='margin:4px 0;color:#374151'>{f}</li>" for f in facts)
+
+    html = f"""
+    <html><body style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;background:#f9fafb;padding:20px">
+      <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+        <div style="background:{color};padding:22px 28px">
+          <h1 style="color:white;margin:0;font-size:18px">🚨 High Risk Delivery Alert</h1>
+          <p style="color:rgba(255,255,255,0.85);margin:4px 0 0;font-size:13px">LogiSense ML Forecasting · Auto-alert</p>
+        </div>
+        <div style="padding:24px 28px">
+          <p style="font-size:14px;color:#374151;margin-bottom:20px">Hi <b>{user_name}</b>, a shipment you scored has been flagged as high risk.</p>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:18px">
+            <tr><td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280">Shipment ID</td><td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:13px;font-weight:bold">{sid}</td></tr>
+            <tr><td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280">Delay Probability</td><td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:20px;font-weight:bold;color:{color}">{prob:.1%}</td></tr>
+            <tr><td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280">Risk Level</td><td style="padding:9px 0;border-bottom:1px solid #e5e7eb"><span style="background:{color};color:white;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:bold">{risk}</span></td></tr>
+            <tr><td style="padding:9px 0;font-size:12px;color:#6b7280">Estimated Delay</td><td style="padding:9px 0;font-size:13px;font-weight:bold">+{est} days</td></tr>
+          </table>
+          <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 16px;border-radius:4px;margin-bottom:16px">
+            <p style="margin:0;font-size:12px;font-weight:bold;color:#92400e">Key Risk Factors</p>
+            <ul style="margin:6px 0 0;padding-left:16px;font-size:12px">{facts_html}</ul>
+          </div>
+          <div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:12px 16px;border-radius:4px;margin-bottom:20px">
+            <p style="margin:0;font-size:12px;font-weight:bold;color:#1e40af">Recommendation</p>
+            <p style="margin:6px 0 0;font-size:12px;color:#1e40af">{rec}</p>
+          </div>
+        </div>
+        <div style="background:#f3f4f6;padding:14px 28px;font-size:11px;color:#9ca3af">
+          Sent automatically by LogiSense · {datetime.now().strftime("%Y-%m-%d %H:%M")} · Alert triggered when delay probability exceeds 70%
+        </div>
+      </div>
+    </body></html>
+    """
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"🚨 [{risk}] Shipment {sid} — {prob:.1%} Delay Risk"
+    msg["From"]    = GMAIL_USER
+    msg["To"]      = to_email
+    msg.attach(MIMEText(f"Shipment {sid} has {prob:.1%} delay probability. Risk: {risk}. Estimated delay: +{est} days.", "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(GMAIL_USER, GMAIL_PASSWORD)
+        server.sendmail(GMAIL_USER, to_email, msg.as_string())
+    print(f"  ✅ Alert email sent → {to_email} for {sid}")
+
+
+def send_batch_alert_email(to_email: str, user_name: str, high_risk: list, total: int):
+    """Send batch scan digest email showing all high-risk shipments found."""
+    if not GMAIL_USER or not GMAIL_PASSWORD:
+        print("  Email not configured — skipping batch email")
+        return
+
+    rows = ""
+    for p in sorted(high_risk, key=lambda x: x["delay_probability"], reverse=True):
+        color = "#ef4444" if p["risk_level"]=="HIGH" else "#f59e0b"
+        rows += f"""<tr>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;font-family:monospace">{p.get('shipment_id','—')}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:14px;font-weight:bold;color:{color}">{p['delay_probability']:.1%}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><span style="background:{color};color:white;padding:2px 7px;border-radius:3px;font-size:10px">{p['risk_level']}</span></td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11px;color:#6b7280">+{p.get('estimated_delay_days',0)}d</td>
+        </tr>"""
+
+    html = f"""
+    <html><body style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto">
+      <div style="background:#1a2235;padding:22px 28px;border-radius:12px 12px 0 0">
+        <h1 style="color:white;margin:0;font-size:18px">📊 Batch Scan Alert Digest</h1>
+        <p style="color:#94a3b8;margin:4px 0 0;font-size:12px">LogiSense · {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
+      </div>
+      <div style="background:white;padding:24px 28px;border-radius:0 0 12px 12px">
+        <p style="font-size:14px;color:#374151;margin-bottom:18px">Hi <b>{user_name}</b>, your batch scan of <b>{total}</b> shipments found <b style="color:#ef4444">{len(high_risk)}</b> high-risk delays.</p>
+        <div style="display:flex;gap:12px;margin-bottom:20px">
+          <div style="background:#fef2f2;padding:14px 20px;border-radius:8px;flex:1;text-align:center">
+            <div style="font-size:26px;font-weight:bold;color:#ef4444">{len(high_risk)}</div>
+            <div style="font-size:11px;color:#6b7280">High Risk</div>
+          </div>
+          <div style="background:#f0fdf4;padding:14px 20px;border-radius:8px;flex:1;text-align:center">
+            <div style="font-size:26px;font-weight:bold;color:#10b981">{total-len(high_risk)}</div>
+            <div style="font-size:11px;color:#6b7280">On Track</div>
+          </div>
+          <div style="background:#eff6ff;padding:14px 20px;border-radius:8px;flex:1;text-align:center">
+            <div style="font-size:26px;font-weight:bold;color:#3b82f6">{total}</div>
+            <div style="font-size:11px;color:#6b7280">Total Scanned</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:#f9fafb">
+            <th style="padding:9px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase">Shipment</th>
+            <th style="padding:9px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase">Probability</th>
+            <th style="padding:9px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase">Risk</th>
+            <th style="padding:9px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase">Est. Delay</th>
+          </tr></thead>
+          <tbody>{rows}</tbody>
+        </table>
+        <p style="font-size:11px;color:#9ca3af;margin-top:16px">Showing top {len(high_risk)} high-risk shipments from your scan.</p>
+      </div>
+    </body></html>
+    """
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"📊 LogiSense Batch Alert — {len(high_risk)} high-risk shipments found in {total} scanned"
+    msg["From"]    = GMAIL_USER
+    msg["To"]      = to_email
+    msg.attach(MIMEText(f"Batch scan found {len(high_risk)} high-risk shipments out of {total} scanned.", "plain"))
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(GMAIL_USER, GMAIL_PASSWORD)
+        server.sendmail(GMAIL_USER, to_email, msg.as_string())
+    print(f"  ✅ Batch digest email sent → {to_email} ({len(high_risk)} high-risk)")
+
 
 # ─────────────────────────────────────────────
 # LOAD MODEL
@@ -238,24 +371,37 @@ def model_info(current_user: dict = Depends(get_current_user)):
 @app.post("/predict", response_model=PredictionResult, tags=["Prediction"])
 def predict(
     shipment: ShipmentInput,
-    current_user: dict = Depends(get_current_user)  # all roles can predict
+    current_user: dict = Depends(get_current_user)
 ):
-    """Predict delay — requires login (any role)."""
+    """Predict delay — requires login. Auto-sends email if high risk."""
     if not model:
         raise HTTPException(503, "Model not loaded.")
     try:
         X    = preprocessor.transform(build_features(shipment)[feature_names])
         prob = float(model.predict_proba(X)[0, 1])
-        return build_result(shipment, prob, username=current_user["username"])
+        result = build_result(shipment, prob, username=current_user["username"])
+
+        # Auto-send email if high risk
+        if prob >= 0.70 and current_user.get("email"):
+            try:
+                send_shipment_alert_email(
+                    to_email  = current_user["email"],
+                    user_name = current_user.get("full_name") or current_user["username"],
+                    prediction= result.dict(),
+                )
+            except Exception as e:
+                print(f"Email send failed: {e}")
+
+        return result
     except Exception as e:
         raise HTTPException(500, str(e))
 
 @app.post("/predict/batch", response_model=BatchResult, tags=["Prediction"])
 def predict_batch(
     batch: BatchInput,
-    current_user: dict = Depends(require_role("admin", "manager"))  # viewer cannot batch predict
+    current_user: dict = Depends(require_role("admin", "manager"))
 ):
-    """Batch predict — requires Manager or Admin role."""
+    """Batch predict — requires Manager or Admin role. Emails high-risk alerts."""
     if not model:
         raise HTTPException(503, "Model not loaded.")
     if len(batch.shipments) > 500:
@@ -265,11 +411,25 @@ def predict_batch(
         X    = preprocessor.transform(build_features(s)[feature_names])
         prob = float(model.predict_proba(X)[0, 1])
         results.append(build_result(s, prob, username=current_user["username"]))
-    delayed = [r for r in results if r.prediction=="DELAYED"]
+    delayed   = [r for r in results if r.prediction=="DELAYED"]
+    high_risk = [r for r in results if r.risk_level=="HIGH"]
+
+    # Send digest email for high-risk shipments
+    if high_risk and current_user.get("email"):
+        try:
+            send_batch_alert_email(
+                to_email  = current_user["email"],
+                user_name = current_user.get("full_name") or current_user["username"],
+                high_risk = [r.dict() for r in high_risk[:10]],
+                total     = len(results),
+            )
+        except Exception as e:
+            print(f"Batch email failed: {e}")
+
     return BatchResult(
         total=len(results), delayed=len(delayed),
         on_time=len(results)-len(delayed),
-        high_risk=sum(1 for r in results if r.risk_level=="HIGH"),
+        high_risk=len(high_risk),
         predictions=results,
     )
 

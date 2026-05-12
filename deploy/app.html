@@ -91,6 +91,35 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
 .card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-family:var(--mono);margin-bottom:16px}
+/* CHATBOT */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 220px);min-height:500px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.chat-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 100%)}
+.chat-header-icon{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:18px}
+.chat-header-title{font-size:14px;font-weight:600;color:white}
+.chat-header-sub{font-size:11px;color:rgba(255,255,255,0.6);font-family:var(--mono)}
+.chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.chat-msg{display:flex;gap:10px;align-items:flex-start;max-width:85%}
+.chat-msg.user{align-self:flex-end;flex-direction:row-reverse}
+.chat-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.chat-avatar.ai{background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:white}
+.chat-avatar.user{background:var(--accent);color:white}
+.chat-bubble{padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.6;max-width:100%}
+.chat-bubble.ai{background:var(--surface);border:1px solid var(--border);color:var(--text);border-top-left-radius:4px}
+.chat-bubble.user{background:var(--accent);color:white;border-top-right-radius:4px}
+.chat-bubble.loading{display:flex;gap:4px;align-items:center;padding:14px 16px}
+.chat-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:chatdot 1.2s infinite}
+.chat-dot:nth-child(2){animation-delay:0.2s}
+.chat-dot:nth-child(3){animation-delay:0.4s}
+@keyframes chatdot{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-6px);opacity:1}}
+.chat-footer{padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end;background:var(--card)}
+.chat-input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--surface);resize:none;outline:none;min-height:42px;max-height:120px;line-height:1.5;transition:border 0.15s}
+.chat-input:focus{border-color:var(--accent)}
+.chat-send{width:42px;height:42px;border-radius:8px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s}
+.chat-send:hover{opacity:0.85}
+.chat-send:disabled{opacity:0.4;cursor:not-allowed}
+.chat-suggestions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px 0;border-top:1px solid var(--border)}
+.chat-chip{background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:var(--accent);border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:var(--mono);transition:all 0.15s;white-space:nowrap}
+.chat-chip:hover{background:rgba(59,130,246,0.15)}
 #embedded-map{height:calc(100vh - 280px);min-height:420px;width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
 .map-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .map-stats-row{display:flex;gap:16px;margin-bottom:12px}
@@ -240,7 +269,20 @@ function LoginPage({ onLogin }) {
           {loading ? "Signing in..." : "Sign in →"}
         </button>
 
-             </div>
+        <div className="login-hint">
+          <div className="login-hint-title">Demo Accounts</div>
+          {[
+            ["admin","admin123","Admin — full access"],
+            ["manager","manager123","Manager — analytics + predictions"],
+            ["viewer","viewer123","Viewer — predictions only"],
+          ].map(([u,p,r])=>(
+            <div key={u} className="login-hint-row">
+              <span>{u} / {p}</span>
+              <span>{r}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -255,6 +297,7 @@ function Sidebar({ tab, setTab, user, onLogout }) {
     { id:"predict",   label:"Predict",      icon:<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>, allowed:true },
     { id:"map",       label:"Live Map",     icon:<path d="M3 11l19-9-9 19-2-8-8-2z"/>, allowed:true },
     { id:"analytics", label:"Analytics",    icon:<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>, allowed:isManager },
+    { id:"chatbot",   label:"AI Assistant", icon:<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>, allowed:true },
     { id:"users",     label:"User Mgmt",    icon:<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>, allowed:isAdmin },
   ];
 
@@ -948,6 +991,167 @@ function LiveMapTab({ token }) {
   );
 }
 
+// ── CHATBOT ───────────────────────────────────
+const SYSTEM_PROMPT = `You are LogiSense AI Assistant — an expert logistics intelligence assistant built into the LogiSense ML-based delivery delay forecasting platform.
+
+You help logistics operations teams with:
+1. Understanding shipment delay risks and probabilities
+2. Interpreting ML model predictions and risk factors
+3. Recommending actions for high-risk shipments
+4. Explaining analytics trends (delay rates by carrier, transport mode, route)
+5. Answering questions about the LogiSense platform features
+
+Key facts about LogiSense:
+- ML model: XGBoost with 93.4% accuracy, 0.971 AUC-ROC
+- Trained on 180,519 real shipments from DataCo dataset
+- 32 features: weather severity, port congestion, carrier OTR, customs complexity, transport mode, cargo type, lead time, distance, weight, peak season, etc.
+- Risk levels: HIGH (>70%), MEDIUM (35-70%), LOW (<35%)
+- Carriers tracked: Maersk, MSC, CMA CGM, DHL Express, FedEx, UPS, DB Schenker
+- Transport modes: ocean, air, road, rail, multimodal
+- Top risk factors: port congestion, weather severity, low carrier OTR, hazmat cargo, high scrutiny customs, peak season, ocean transport, tight lead times
+
+Analytics insights:
+- Highest delay rate carrier: MSC (34%)
+- Lowest delay rate carrier: FedEx (8%)
+- Highest delay mode: Ocean (31%)
+- Lowest delay mode: Air (7%)
+- Peak delay months: October-December (Q4 surge)
+- Riskiest route: Shanghai → Chicago (91% avg probability)
+
+When users ask about specific shipments, help them understand risk factors and what actions to take.
+When risk is HIGH: recommend expediting, rerouting, or customer notification.
+When risk is MEDIUM: recommend monitoring closely and preparing contingency plans.
+When risk is LOW: confirm on track, routine monitoring.
+
+Be concise, professional, and actionable. Use bullet points for recommendations.
+Always respond in the same language the user writes in.`;
+
+const SUGGESTIONS = [
+  "What are the top risk factors for delays?",
+  "Which carrier has the lowest delay rate?",
+  "How accurate is the ML model?",
+  "What should I do for a high-risk shipment?",
+  "Why is ocean freight risky in Q4?",
+  "Explain the delay probability score",
+];
+
+function Chatbot({ token, username }) {
+  const [messages, setMessages] = useState([{
+    role: "assistant",
+    content: `👋 Hi ${username}! I'm your **LogiSense AI Assistant** powered by Claude.\n\nI can help you with:\n• Understanding shipment delay risks\n• Interpreting ML predictions\n• Recommending actions for high-risk shipments\n• Explaining analytics and trends\n\nWhat would you like to know?`
+  }]);
+  const [input,   setInput]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  useEffect(()=>{
+    bottomRef.current?.scrollIntoView({ behavior:"smooth" });
+  },[messages]);
+
+  const sendMessage = async (text) => {
+    const userText = text || input.trim();
+    if(!userText || loading) return;
+    setInput("");
+
+    const newMessages = [...messages, { role:"user", content:userText }];
+    setMessages(newMessages);
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          messages: newMessages.map(m=>({ role:m.role, content:m.content })),
+        })
+      });
+      if(!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      setMessages(prev=>[...prev, { role:"assistant", content: data.reply }]);
+    } catch(e) {
+      setMessages(prev=>[...prev, { role:"assistant", content:"⚠️ Connection error. Make sure the Railway API is running and try again." }]);
+    } finally {
+      setLoading(false);
+      setTimeout(()=>inputRef.current?.focus(), 100);
+    }
+  };
+
+  const handleKey = (e) => {
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+  };
+
+  const formatMsg = (text) => {
+    // Simple markdown-like formatting
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/•/g, "•")
+      .replace(/\n/g, "<br/>");
+  };
+
+  return (
+    <div className="chat-wrap">
+      <div className="chat-header">
+        <div className="chat-header-icon">🤖</div>
+        <div>
+          <div className="chat-header-title">LogiSense AI Assistant</div>
+          <div className="chat-header-sub">Powered by Claude · Logistics Intelligence</div>
+        </div>
+      </div>
+
+      <div className="chat-messages">
+        {messages.map((m,i)=>(
+          <div key={i} className={`chat-msg ${m.role==="user"?"user":""}`}>
+            <div className={`chat-avatar ${m.role==="user"?"user":"ai"}`}>
+              {m.role==="user" ? username[0].toUpperCase() : "AI"}
+            </div>
+            <div className={`chat-bubble ${m.role==="user"?"user":"ai"}`}
+              dangerouslySetInnerHTML={{__html: formatMsg(m.content)}}/>
+          </div>
+        ))}
+        {loading && (
+          <div className="chat-msg">
+            <div className="chat-avatar ai">AI</div>
+            <div className="chat-bubble ai loading">
+              <div className="chat-dot"/><div className="chat-dot"/><div className="chat-dot"/>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef}/>
+      </div>
+
+      {messages.length === 1 && (
+        <div className="chat-suggestions">
+          {SUGGESTIONS.map((s,i)=>(
+            <button key={i} className="chat-chip" onClick={()=>sendMessage(s)}>{s}</button>
+          ))}
+        </div>
+      )}
+
+      <div className="chat-footer">
+        <textarea
+          ref={inputRef}
+          className="chat-input"
+          value={input}
+          onChange={e=>setInput(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="Ask about shipment risks, delays, analytics..."
+          rows={1}
+        />
+        <button className="chat-send" onClick={()=>sendMessage()} disabled={loading||!input.trim()}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [user,    setUser]    = useState(null);
   const [tab,     setTab]     = useState("dashboard");
@@ -984,6 +1188,7 @@ function App() {
     predict:   { title:"Predict Delay",   sub:"Single shipment ML inference" },
     map:       { title:"Live Map",        sub:"1,000 shipment routes · color coded by risk" },
     analytics: { title:"Analytics",       sub:"Fleet performance & trends" },
+    chatbot:   { title:"AI Assistant",    sub:"Ask anything about your shipments · Powered by Claude AI" },
     users:     { title:"User Management", sub:"Manage team access and roles" },
   };
 
@@ -1007,6 +1212,7 @@ function App() {
         {tab==="predict"   && <Predict token={user.access_token} username={user.username}/>}
         {tab==="map"       && <LiveMapTab token={user.access_token}/>}
         {tab==="analytics" && <Analytics/>}
+        {tab==="chatbot"   && <Chatbot token={user.access_token} username={user.username}/>}
         {tab==="users"     && <UserManagement token={user.access_token}/>}
       </div>
     </div>

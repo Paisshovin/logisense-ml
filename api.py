@@ -444,6 +444,79 @@ def admin_stats(current_user: dict = Depends(require_role("admin"))):
         "accessed_by":    current_user["username"],
     }
 
+
+# ── AI Chatbot endpoint ────────────────────────
+import httpx
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_BASE    = "https://api.groq.com/openai/v1"
+
+CHATBOT_SYSTEM = """You are LogiSense AI Assistant — an expert logistics intelligence assistant built into the LogiSense ML-based delivery delay forecasting platform.
+
+You help logistics operations teams with:
+1. Understanding shipment delay risks and probabilities
+2. Interpreting ML model predictions and risk factors
+3. Recommending actions for high-risk shipments
+4. Explaining analytics trends (delay rates by carrier, transport mode, route)
+5. Answering questions about the LogiSense platform features
+
+Key facts about LogiSense:
+- ML model: XGBoost with 93.4% accuracy, 0.971 AUC-ROC
+- Trained on 180,519 real shipments from DataCo dataset
+- 32 features: weather severity, port congestion, carrier OTR, customs complexity, transport mode, cargo type, lead time, distance, weight, peak season
+- Risk levels: HIGH (>70%), MEDIUM (35-70%), LOW (<35%)
+- Carriers: Maersk, MSC, CMA CGM, DHL Express, FedEx, UPS, DB Schenker
+- Transport modes: ocean, air, road, rail, multimodal
+- Highest delay carrier: MSC (34%) | Lowest: FedEx (8%)
+- Highest delay mode: Ocean (31%) | Lowest: Air (7%)
+- Peak delay months: October-December (Q4 surge)
+- Riskiest route: Shanghai → Chicago (91% avg probability)
+
+When risk is HIGH: recommend expediting, rerouting, or customer notification.
+When risk is MEDIUM: recommend monitoring and preparing contingency plans.
+When risk is LOW: confirm on track, routine monitoring.
+
+Be concise, professional, and actionable. Use bullet points for recommendations.
+Always respond in the same language the user writes in."""
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+
+@app.post("/chat", tags=["AI Assistant"])
+async def chat(
+    request: ChatRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """AI chatbot endpoint — powered by Groq (free)."""
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            res = await client.post(
+                f"{GROQ_BASE}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type":  "application/json",
+                },
+                json={
+                    "model":       "llama3-8b-8192",
+                    "max_tokens":  1000,
+                    "temperature": 0.7,
+                    "messages": [
+                        {"role": "system", "content": CHATBOT_SYSTEM},
+                        *[{"role": m.role, "content": m.content} for m in request.messages]
+                    ],
+                }
+            )
+            data = res.json()
+            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "Sorry, I could not get a response.")
+            return {"reply": reply}
+    except Exception as e:
+        raise HTTPException(500, f"AI error: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))

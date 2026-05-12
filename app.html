@@ -91,17 +91,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
 .card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-family:var(--mono);margin-bottom:16px}
-#embedded-map{height:calc(100vh - 280px);min-height:420px;width:100%;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
-.map-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.map-stats-row{display:flex;gap:16px;margin-bottom:12px}
-.map-stat-pill{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-family:var(--mono)}
-.map-stat-dot{width:8px;height:8px;border-radius:50%}
-.leaflet-container{background:#f0f4f8 !important}
-.leaflet-tooltip{background:white;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;font-family:var(--mono);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,0.1)}
-.leaflet-tooltip::before{display:none}
-.map-legend-box{position:absolute;bottom:20px;left:20px;z-index:1000;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
-.scan-btn-map{background:var(--accent);color:white;border:none;border-radius:7px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)}
-.scan-btn-map:disabled{opacity:0.5;cursor:not-allowed}
+.map-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.map-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.map-header .card-title{margin-bottom:0}
+#dash-map{height:420px;width:100%;background:#0d1424}
+.map-legend{display:flex;gap:16px;align-items:center}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.map-stats{display:flex;gap:20px;padding:12px 20px;border-top:1px solid var(--border);background:rgba(0,0,0,0.2)}
+.map-stat{font-size:11px;font-family:var(--mono)}
+.map-stat span{font-weight:600}
+.leaflet-container{background:#0d1424 !important}
+.leaflet-tooltip-dark{background:#1a2235;border:1px solid rgba(255,255,255,0.1);color:#f1f5f9;font-size:11px;font-family:'Courier New',monospace;padding:6px 10px;border-radius:6px}
+.leaflet-tooltip-dark::before{display:none}
 
 /* Access denied */
 .access-denied{text-align:center;padding:60px 20px}
@@ -153,8 +155,8 @@ select.form-control option{background:var(--surface)}
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
-const API = "https://web-production-d0f39.up.railway.app";
+const { useState, useEffect } = React;
+const API = "http://localhost:8000";
 
 const SHIPMENTS = [
   {id:"SH-4821",route:"Shanghai → Chicago",mode:"ocean",prob:0.91},
@@ -240,7 +242,20 @@ function LoginPage({ onLogin }) {
           {loading ? "Signing in..." : "Sign in →"}
         </button>
 
-             </div>
+        <div className="login-hint">
+          <div className="login-hint-title">Demo Accounts</div>
+          {[
+            ["admin","admin123","Admin — full access"],
+            ["manager","manager123","Manager — analytics + predictions"],
+            ["viewer","viewer123","Viewer — predictions only"],
+          ].map(([u,p,r])=>(
+            <div key={u} className="login-hint-row">
+              <span>{u} / {p}</span>
+              <span>{r}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -346,13 +361,12 @@ function Predict({ token, username }) {
     weight_kg:2400, distance_km:12500, carrier_otr_30d:0.82,
     port_congestion:0.55, weather_severity:0.40, planned_lead_days:21, is_peak_season:0,
   });
-  const [result,    setResult]    = useState(null);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState(null);
-  const [emailSent, setEmailSent] = useState(false);
+  const [result,  setResult]  = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState(null);
 
   const predict = async () => {
-    setLoading(true); setError(null); setResult(null); setEmailSent(false);
+    setLoading(true); setError(null); setResult(null);
     try {
       const res = await fetch(`${API}/predict`, {
         method: "POST",
@@ -365,9 +379,7 @@ function Predict({ token, username }) {
         })
       });
       if (!res.ok) throw new Error((await res.json()).detail);
-      const data = await res.json();
-      setResult(data);
-      if(data.delay_probability >= 0.70) setEmailSent(true);
+      setResult(await res.json());
     } catch(e) { setError(e.message); }
     finally    { setLoading(false); }
   };
@@ -434,11 +446,6 @@ function Predict({ token, username }) {
               ))}
             </div>
             <div className="rec-box">💡 {result.recommendation}</div>
-            {emailSent && (
-              <div style={{background:"rgba(16,185,129,0.08)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:7,padding:"8px 12px",fontSize:11,color:"#34d399",textAlign:"left",marginTop:8,fontFamily:"var(--mono)"}}>
-                📧 Alert email sent to your account email
-              </div>
-            )}
             <div style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:10,textAlign:"left"}}>
               Predicted by: {result.predicted_by} · {new Date(result.predicted_at).toLocaleTimeString()}
             </div>
@@ -554,237 +561,13 @@ function UserManagement({ token }) {
 
 // ── ANALYTICS (Manager+) ──────────────────────
 function Analytics() {
-  const { useEffect, useRef, useState } = React;
-
-  const carrierChartRef  = useRef(null);
-  const modeChartRef     = useRef(null);
-  const trendChartRef    = useRef(null);
-  const carrierChart     = useRef(null);
-  const modeChart        = useRef(null);
-  const trendChart       = useRef(null);
-
-  // ── Simulated analytics data ──────────────
-  const carrierData = [
-    { name:"MSC",         rate:34, shipments:2841 },
-    { name:"CMA CGM",     rate:27, shipments:3102 },
-    { name:"DB Schenker", rate:22, shipments:1876 },
-    { name:"Maersk",      rate:18, shipments:4210 },
-    { name:"UPS",         rate:14, shipments:2340 },
-    { name:"DHL Express", rate:11, shipments:3890 },
-    { name:"FedEx",       rate:8,  shipments:2980 },
-  ];
-
-  const modeData = [
-    { name:"Ocean",      rate:31, color:"#3b82f6" },
-    { name:"Multimodal", rate:24, color:"#8b5cf6" },
-    { name:"Rail",       rate:18, color:"#06b6d4" },
-    { name:"Road",       rate:14, color:"#f59e0b" },
-    { name:"Air",        rate:7,  color:"#10b981" },
-  ];
-
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const trendDelayed = [18,21,19,24,22,20,25,28,31,38,42,35];
-  const trendOnTime  = [82,79,81,76,78,80,75,72,69,62,58,65];
-
-  const topRoutes = [
-    { route:"Shanghai → Chicago",   prob:0.91, mode:"Ocean",  carrier:"MSC",         count:142 },
-    { route:"Dubai → New York",     prob:0.88, mode:"Ocean",  carrier:"MSC",         count:98  },
-    { route:"São Paulo → London",   prob:0.82, mode:"Ocean",  carrier:"CMA CGM",     count:87  },
-    { route:"Rotterdam → Mumbai",   prob:0.78, mode:"Ocean",  carrier:"Maersk",      count:124 },
-    { route:"Hamburg → Tokyo",      prob:0.71, mode:"Rail",   carrier:"DB Schenker", count:76  },
-    { route:"Singapore → London",   prob:0.64, mode:"Ocean",  carrier:"CMA CGM",     count:109 },
-    { route:"Mumbai → Frankfurt",   prob:0.58, mode:"Air",    carrier:"DHL Express", count:63  },
-    { route:"Sydney → Frankfurt",   prob:0.44, mode:"Air",    carrier:"DB Schenker", count:91  },
-    { route:"LA → Frankfurt",       prob:0.32, mode:"Air",    carrier:"DHL Express", count:178 },
-    { route:"Tokyo → Los Angeles",  prob:0.18, mode:"Ocean",  carrier:"Maersk",      count:203 },
-  ];
-
-  useEffect(()=>{
-    // Carrier chart
-    if(carrierChartRef.current && !carrierChart.current){
-      carrierChart.current = new Chart(carrierChartRef.current,{
-        type:"bar",
-        data:{
-          labels: carrierData.map(c=>c.name),
-          datasets:[{
-            label:"Delay rate %",
-            data: carrierData.map(c=>c.rate),
-            backgroundColor: carrierData.map(c=>c.rate>=25?"rgba(239,68,68,0.7)":c.rate>=15?"rgba(245,158,11,0.7)":"rgba(16,185,129,0.7)"),
-            borderRadius:5, borderSkipped:false,
-          }]
-        },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          plugins:{legend:{display:false}},
-          scales:{
-            x:{ticks:{color:"#64748b",font:{size:10}},grid:{display:false}},
-            y:{ticks:{color:"#64748b",font:{size:10},callback:v=>v+"%"},grid:{color:"rgba(255,255,255,0.05)"},max:40},
-          }
-        }
-      });
-    }
-
-    // Mode chart
-    if(modeChartRef.current && !modeChart.current){
-      modeChart.current = new Chart(modeChartRef.current,{
-        type:"doughnut",
-        data:{
-          labels: modeData.map(m=>m.name),
-          datasets:[{
-            data: modeData.map(m=>m.rate),
-            backgroundColor: modeData.map(m=>m.color),
-            borderWidth:0, hoverOffset:6,
-          }]
-        },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          plugins:{
-            legend:{
-              position:"right",
-              labels:{color:"#64748b",font:{size:11},boxWidth:12,padding:12}
-            }
-          },
-          cutout:"65%",
-        }
-      });
-    }
-
-    // Trend chart
-    if(trendChartRef.current && !trendChart.current){
-      trendChart.current = new Chart(trendChartRef.current,{
-        type:"line",
-        data:{
-          labels: months,
-          datasets:[
-            {label:"Delayed %",data:trendDelayed,borderColor:"#ef4444",borderWidth:2,tension:0.4,pointRadius:4,fill:true,backgroundColor:"rgba(239,68,68,0.06)"},
-            {label:"On Time %",data:trendOnTime, borderColor:"#10b981",borderWidth:2,tension:0.4,pointRadius:4,fill:true,backgroundColor:"rgba(16,185,129,0.06)",borderDash:[5,4]},
-          ]
-        },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          plugins:{legend:{labels:{color:"#64748b",font:{size:11},boxWidth:12}}},
-          scales:{
-            x:{ticks:{color:"#64748b",font:{size:10}},grid:{display:false}},
-            y:{ticks:{color:"#64748b",font:{size:10},callback:v=>v+"%"},grid:{color:"rgba(255,255,255,0.05)"},min:0,max:100},
-          }
-        }
-      });
-    }
-
-    return ()=>{
-      if(carrierChart.current){ carrierChart.current.destroy(); carrierChart.current=null; }
-      if(modeChart.current)   { modeChart.current.destroy();   modeChart.current=null;    }
-      if(trendChart.current)  { trendChart.current.destroy();  trendChart.current=null;   }
-    };
-  },[]);
-
-  const riskColor = p=>p>=0.7?"#ef4444":p>=0.35?"#f59e0b":"#10b981";
-  const badgeCls  = p=>p>=0.7?"badge badge-high":p>=0.35?"badge badge-medium":"badge badge-low";
-  const riskLbl   = p=>p>=0.7?"HIGH":p>=0.35?"MED":"LOW";
-
   return (
-    <div>
-      {/* Summary metrics */}
-      <div className="metrics" style={{marginBottom:16}}>
-        {[
-          {label:"Total Shipments",  value:"18,241", color:"#3b82f6", delta:"Last 12 months"},
-          {label:"Avg Delay Rate",   value:"19.3%",  color:"#ef4444", delta:"↑2.1% vs last year"},
-          {label:"On-Time Rate",     value:"80.7%",  color:"#10b981", delta:"↓2.1% vs last year"},
-          {label:"Avg Delay Days",   value:"3.2d",   color:"#f59e0b", delta:"When delayed"},
-        ].map(m=>(
-          <div key={m.label} className="metric-card">
-            <div className="metric-label">{m.label}</div>
-            <div className="metric-value" style={{color:m.color}}>{m.value}</div>
-            <div className="metric-delta">{m.delta}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Carrier + Mode charts */}
-      <div className="grid2" style={{marginBottom:16}}>
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Delay rate by carrier</div>
-            <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>% of shipments delayed</span>
-          </div>
-          <div style={{position:"relative",height:"220px"}}>
-            <canvas ref={carrierChartRef} role="img" aria-label="Bar chart of delay rate by carrier"/>
-          </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12}}>
-            {carrierData.map(c=>(
-              <div key={c.name} style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>
-                {c.name}: <span style={{color:"var(--text)"}}>{c.shipments.toLocaleString()} ships</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Delay rate by transport mode</div>
-            <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>% share of delays</span>
-          </div>
-          <div style={{position:"relative",height:"220px"}}>
-            <canvas ref={modeChartRef} role="img" aria-label="Doughnut chart of delay rate by transport mode"/>
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly trend */}
-      <div className="card" style={{marginBottom:16}}>
-        <div className="card-header">
-          <div className="card-title">Monthly delay trend — 12 months</div>
-          <div style={{display:"flex",gap:16}}>
-            <span style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)"}}>
-              <span style={{width:10,height:10,borderRadius:2,background:"#ef4444",display:"inline-block"}}/>Delayed
-            </span>
-            <span style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)"}}>
-              <span style={{width:10,height:10,borderRadius:2,background:"#10b981",display:"inline-block"}}/>On time
-            </span>
-          </div>
-        </div>
-        <div style={{position:"relative",height:"200px"}}>
-          <canvas ref={trendChartRef} role="img" aria-label="Line chart of monthly delay trends"/>
-        </div>
-        <div style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:10}}>
-          ⚠️ Peak delay months: Oct–Dec (Q4 surge). Lowest delays: Jan–Mar.
-        </div>
-      </div>
-
-      {/* Top high-risk routes */}
-      <div className="card">
-        <div className="card-header">
-          <div className="card-title">Top routes by delay risk</div>
-          <span style={{fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)"}}>ML-scored · sorted by probability</span>
-        </div>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-          <thead>
-            <tr style={{borderBottom:"1px solid var(--border)"}}>
-              {["Route","Mode","Carrier","Risk","Delay prob","Volume"].map(h=>(
-                <th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:10,color:"var(--muted)",fontFamily:"var(--mono)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {topRoutes.map((r,i)=>(
-              <tr key={i} style={{borderBottom:"1px solid var(--border)"}}>
-                <td style={{padding:"10px",fontFamily:"var(--mono)",color:"var(--accent2)"}}>{r.route}</td>
-                <td style={{padding:"10px",color:"var(--muted)"}}>{r.mode}</td>
-                <td style={{padding:"10px",color:"var(--muted)"}}>{r.carrier}</td>
-                <td style={{padding:"10px"}}><span className={badgeCls(r.prob)}>{riskLbl(r.prob)}</span></td>
-                <td style={{padding:"10px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{width:60,height:4,background:"rgba(255,255,255,0.07)",borderRadius:2,overflow:"hidden"}}>
-                      <div style={{width:`${Math.round(r.prob*100)}%`,height:"100%",background:riskColor(r.prob),borderRadius:2}}/>
-                    </div>
-                    <span style={{fontFamily:"var(--mono)",fontSize:11,color:riskColor(r.prob)}}>{Math.round(r.prob*100)}%</span>
-                  </div>
-                </td>
-                <td style={{padding:"10px",color:"var(--muted)",fontFamily:"var(--mono)"}}>{r.count} ships/mo</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="card" style={{textAlign:"center",padding:"40px"}}>
+      <div style={{fontSize:32,marginBottom:12}}>📊</div>
+      <div style={{fontSize:16,fontWeight:600,marginBottom:8}}>Analytics Dashboard</div>
+      <div style={{fontSize:12,color:"var(--muted)",fontFamily:"var(--mono)"}}>
+        Available to Manager and Admin roles.<br/>
+        Connect your live data to see real analytics here.
       </div>
     </div>
   );
@@ -809,139 +592,129 @@ const COORDS = {
   "New York":    [40.7128, -74.0060],
 };
 
-// ── Map constants ─────────────────────────────
-function LiveMapTab({ token }) {
-  const mapRef   = useRef(null);
-  const leafRef  = useRef(null);
-  const linesRef = useRef([]);
-  const mkRef    = useRef([]);
-  const [scanning, setScanning] = useState(false);
-  const [stats,    setStats]    = useState({high:0,med:0,low:0,total:0});
-  const [status,   setStatus]   = useState("Click Scan to load routes");
+const CARRIERS     = ["Maersk","MSC","CMA CGM","DHL Express","FedEx","UPS","DB Schenker"];
+const MODES        = ["ocean","air","road","rail","multimodal"];
+const CARGO_TYPES  = ["general","hazmat","perishable","fragile","bulk"];
+const CUSTOMS_LIST = ["standard","complex","high_scrutiny"];
+const ORIGINS_LIST = Object.keys(COORDS).slice(0,10);
+const DESTS_LIST   = Object.keys(COORDS).slice(4);
 
-  const COORDS = {
-    "Shanghai":[31.23,121.47],"Hamburg":[53.58,10.02],"Rotterdam":[51.92,4.48],
-    "Singapore":[1.35,103.82],"Los Angeles":[34.05,-118.24],"Dubai":[25.20,55.27],
-    "Mumbai":[19.08,72.88],"Tokyo":[35.68,139.65],"Sydney":[-33.87,151.21],
-    "Sao Paulo":[-23.55,-46.63],"Chicago":[41.88,-87.63],"Frankfurt":[50.11,8.68],
-    "London":[51.51,-0.13],"New York":[40.71,-74.01],
-  };
-  const CITIES = Object.keys(COORDS);
-  function sr(s){let x=Math.sin(s+1)*10000;return x-Math.floor(x);}
-  const POOL = Array.from({length:500},(_,i)=>({
-    shipment_id:"SH-"+(10000+i),
-    origin:CITIES[Math.floor(sr(i)*CITIES.length)],
-    destination:CITIES[Math.floor(sr(i+1000)*CITIES.length)],
-    carrier:["Maersk","MSC","CMA CGM","DHL","FedEx"][Math.floor(sr(i+2000)*5)],
-    transport_mode:["ocean","air","road","rail"][Math.floor(sr(i+3000)*4)],
-    cargo_type:["general","hazmat","perishable","fragile"][Math.floor(sr(i+4000)*4)],
-    customs_complexity:["standard","complex","high_scrutiny"][Math.floor(sr(i+5000)*3)],
-    weight_kg:Math.round(50+sr(i+6000)*9950),
-    distance_km:Math.round(500+sr(i+7000)*17500),
-    carrier_otr_30d:Math.round((0.6+sr(i+8000)*0.4)*1000)/1000,
-    port_congestion:Math.round(sr(i+9000)*1000)/1000,
-    weather_severity:Math.round(sr(i+10000)*1000)/1000,
-    planned_lead_days:Math.round(3+sr(i+11000)*27),
-    is_peak_season:sr(i+12000)>0.7?1:0,
+function seededRand(seed){ let x=Math.sin(seed+1)*10000; return x-Math.floor(x); }
+
+function generateShipments(n=1000){
+  return Array.from({length:n},(_,i)=>({
+    shipment_id:`SH-${10000+i}`,
+    origin:      ORIGINS_LIST[Math.floor(seededRand(i)*ORIGINS_LIST.length)],
+    destination: DESTS_LIST[Math.floor(seededRand(i+1000)*DESTS_LIST.length)],
+    carrier:     CARRIERS[Math.floor(seededRand(i+2000)*CARRIERS.length)],
+    transport_mode: MODES[Math.floor(seededRand(i+3000)*MODES.length)],
+    cargo_type:  CARGO_TYPES[Math.floor(seededRand(i+4000)*CARGO_TYPES.length)],
+    customs_complexity: CUSTOMS_LIST[Math.floor(seededRand(i+5000)*CUSTOMS_LIST.length)],
+    weight_kg:   Math.round(50+seededRand(i+6000)*9950),
+    distance_km: Math.round(500+seededRand(i+7000)*17500),
+    carrier_otr_30d: Math.round((0.6+seededRand(i+8000)*0.4)*1000)/1000,
+    port_congestion: Math.round(seededRand(i+9000)*1000)/1000,
+    weather_severity:Math.round(seededRand(i+10000)*1000)/1000,
+    planned_lead_days: Math.round(3+seededRand(i+11000)*27),
+    is_peak_season: seededRand(i+12000)>0.7?1:0,
   }));
+}
 
+const SHIPMENT_POOL_DASH = generateShipments(1000);
+
+function LiveMapTab({ token }) {
+  const mapRef     = useRef(null);
+  const leafletRef = useRef(null);
+  const linesRef   = useRef([]);
+  const markersRef = useRef([]);
+  const [shipments,  setShipments]  = useState([]);
+  const [scanning,   setScanning]   = useState(false);
+  const [lastScan,   setLastScan]   = useState(null);
+  const [stats,      setStats]      = useState({high:0,medium:0,low:0});
+
+  // Init map
   useEffect(()=>{
-    // Use multiple retries to ensure map renders after tab becomes visible
-    const initMap = () => {
-      if(!mapRef.current) return;
-      if(leafRef.current){
-        leafRef.current.invalidateSize();
-        return;
-      }
-      const m = L.map(mapRef.current,{center:[25,15],zoom:2,zoomControl:true,attributionControl:false,minZoom:1,maxZoom:7});
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}).addTo(m);
-      leafRef.current = m;
-      // Multiple invalidateSize calls to handle tab visibility delay
-      [200,500,1000,2000].forEach(ms=>setTimeout(()=>m.invalidateSize(),ms));
-    };
-    // Small delay to ensure DOM is ready
-    const t = setTimeout(initMap, 100);
-    return ()=>{
-      clearTimeout(t);
-      if(leafRef.current){leafRef.current.remove();leafRef.current=null;}
-    };
+    if(!mapRef.current || leafletRef.current) return;
+    const map = L.map(mapRef.current,{center:[20,10],zoom:2,zoomControl:true,attributionControl:false,minZoom:1,maxZoom:6});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(map);
+    leafletRef.current = map;
+    return ()=>{ map.remove(); leafletRef.current=null; };
   },[]);
 
-  const doScan = async () => {
-    if(scanning||!leafRef.current) return;
-    setScanning(true); setStatus("Scanning 500 shipments...");
-    const vary=s=>({...s,
-      port_congestion:Math.min(1,Math.max(0,s.port_congestion+(Math.random()-0.5)*0.15)),
-      weather_severity:Math.min(1,Math.max(0,s.weather_severity+(Math.random()-0.5)*0.12)),
+  // Draw routes when shipments update
+  useEffect(()=>{
+    const map = leafletRef.current;
+    if(!map||!shipments.length) return;
+    linesRef.current.forEach(l=>map.removeLayer(l));
+    markersRef.current.forEach(m=>map.removeLayer(m));
+    linesRef.current=[]; markersRef.current=[];
+    const cityCount={};
+    shipments.forEach((s,i)=>{
+      const src  = SHIPMENT_POOL_DASH[i];
+      if(!src) return;
+      const oC = COORDS[src.origin]; const dC = COORDS[src.destination];
+      if(!oC||!dC) return;
+      const p = s.delay_probability;
+      const color = p>=0.7?"#ef4444":p>=0.35?"#f59e0b":"#10b981";
+      const line = L.polyline([oC,dC],{color,weight:p>=0.7?1.8:0.8,opacity:p>=0.7?0.75:p>=0.35?0.45:0.25,dashArray:p<0.35?"4,6":null}).addTo(map);
+      line.bindTooltip(`<b>${s.shipment_id}</b><br>${src.origin} → ${src.destination}<br>Risk: ${Math.round(p*100)}% (${s.risk_level})`,{sticky:true,className:"leaflet-tooltip-dark"});
+      linesRef.current.push(line);
+      cityCount[src.origin]=(cityCount[src.origin]||0)+1;
+      cityCount[src.destination]=(cityCount[src.destination]||0)+1;
     });
+    Object.entries(COORDS).forEach(([city,[lat,lng]])=>{
+      if(!cityCount[city]) return;
+      const m = L.circleMarker([lat,lng],{radius:Math.min(7,3+Math.log2(cityCount[city]||1)),color:"#06b6d4",fillColor:"#06b6d4",fillOpacity:0.9,weight:1}).addTo(map);
+      m.bindTooltip(`<b>${city}</b><br>${cityCount[city]} shipments`,{sticky:true,className:"leaflet-tooltip-dark"});
+      markersRef.current.push(m);
+    });
+  },[shipments]);
+
+  const scan = async () => {
+    if(!token) return;
+    setScanning(true);
     try {
-      const r = await fetch(API+"/predict/batch",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
-        body:JSON.stringify({shipments:POOL.map(vary)})
+      const vary = s=>({...s,
+        port_congestion:Math.min(1,Math.max(0,s.port_congestion+(Math.random()-0.5)*0.15)),
+        weather_severity:Math.min(1,Math.max(0,s.weather_severity+(Math.random()-0.5)*0.12)),
       });
-      if(!r.ok) throw new Error("API error "+r.status);
-      const d = await r.json();
-      const map = leafRef.current;
-      linesRef.current.forEach(l=>map.removeLayer(l)); linesRef.current=[];
-      mkRef.current.forEach(m=>map.removeLayer(m)); mkRef.current=[];
-      const cc={};
-      d.predictions.forEach((res,i)=>{
-        const s=POOL[i]; if(!s) return;
-        const oC=COORDS[s.origin]; const dC=COORDS[s.destination];
-        if(!oC||!dC||s.origin===s.destination) return;
-        const p=res.delay_probability;
-        const col=p>=0.7?"#dc2626":p>=0.35?"#d97706":"#16a34a";
-        const ln=L.polyline([oC,dC],{color:col,weight:p>=0.7?2:p>=0.35?1.2:0.7,opacity:p>=0.7?0.8:p>=0.35?0.5:0.25,dashArray:p>=0.7?"8,4":p>=0.35?"5,6":"3,8"}).addTo(map);
-        ln.bindTooltip("<b>"+s.shipment_id+"</b><br>"+s.origin+" → "+s.destination+"<br>"+Math.round(p*100)+"% risk",{sticky:true});
-        linesRef.current.push(ln);
-        cc[s.origin]=(cc[s.origin]||0)+1; cc[s.destination]=(cc[s.destination]||0)+1;
-      });
-      Object.entries(COORDS).forEach(([city,[lat,lng]])=>{
-        if(!cc[city]) return;
-        const m=L.circleMarker([lat,lng],{radius:Math.min(8,3+Math.log2(cc[city])),color:"white",fillColor:"#2563eb",fillOpacity:0.9,weight:2}).addTo(map);
-        m.bindTooltip("<b>"+city+"</b><br>"+cc[city]+" shipments",{sticky:true});
-        mkRef.current.push(m);
-      });
-      const hi=d.predictions.filter(r=>r.delay_probability>=0.7).length;
-      const me=d.predictions.filter(r=>r.delay_probability>=0.35&&r.delay_probability<0.7).length;
-      const lo=d.predictions.filter(r=>r.delay_probability<0.35).length;
-      setStats({high:hi,med:me,low:lo,total:d.predictions.length});
-      setStatus("Last scan: "+new Date().toLocaleTimeString());
-    } catch(e){ setStatus("Error: "+e.message); }
-    finally { setScanning(false); }
+      const [r1,r2] = await Promise.all([
+        fetch(`${API}/predict/batch`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({shipments:SHIPMENT_POOL_DASH.slice(0,500).map(vary)})}),
+        fetch(`${API}/predict/batch`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({shipments:SHIPMENT_POOL_DASH.slice(500,1000).map(vary)})}),
+      ]);
+      const [d1,d2] = await Promise.all([r1.json(),r2.json()]);
+      const all = [...d1.predictions,...d2.predictions];
+      setShipments(all);
+      setStats({high:all.filter(s=>s.delay_probability>=0.7).length,medium:all.filter(s=>s.delay_probability>=0.35&&s.delay_probability<0.7).length,low:all.filter(s=>s.delay_probability<0.35).length});
+      setLastScan(new Date().toLocaleTimeString());
+    } catch(e){console.error(e);}
+    finally{setScanning(false);}
   };
+
+  useEffect(()=>{ scan(); },[]);
 
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-        <div>
-          <div style={{fontSize:13,fontWeight:600}}>Live Shipment Map · 500 routes</div>
-          <div style={{fontSize:11,color:"var(--muted)",fontFamily:"var(--mono)",marginTop:2}}>{status}</div>
-        </div>
-        <button onClick={doScan} disabled={scanning}
-          style={{background:"var(--accent)",color:"white",border:"none",borderRadius:7,padding:"7px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-          {scanning?"Scanning...":"↻ Scan now"}
-        </button>
-      </div>
-      <div style={{display:"flex",gap:12,marginBottom:12}}>
-        {[{l:"High",v:stats.high,c:"#dc2626"},{l:"Medium",v:stats.med,c:"#d97706"},{l:"Low",v:stats.low,c:"#16a34a"},{l:"Total",v:stats.total,c:"#2563eb"}].map(s=>(
-          <div key={s.l} style={{display:"flex",alignItems:"center",gap:6,background:"var(--card)",border:"1px solid var(--border)",borderRadius:8,padding:"6px 14px",fontSize:12,fontFamily:"var(--mono)"}}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:s.c}}/>
-            <span style={{color:"var(--muted)"}}>{s.l}</span>
-            <span style={{fontWeight:600,color:s.c}}>{s.v}</span>
+      <div className="map-card">
+        <div className="map-header">
+          <div className="card-title">Live shipment map — 1,000 routes</div>
+          <div className="map-legend">
+            <div className="legend-item"><div className="legend-dot" style={{background:"#ef4444"}}/> High</div>
+            <div className="legend-item"><div className="legend-dot" style={{background:"#f59e0b"}}/> Medium</div>
+            <div className="legend-item"><div className="legend-dot" style={{background:"#10b981"}}/> Low</div>
+            <button onClick={scan} disabled={scanning}
+              style={{fontSize:11,padding:"5px 12px",background:"rgba(59,130,246,0.15)",color:"var(--accent)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:6,cursor:"pointer",fontFamily:"var(--mono)",marginLeft:8}}>
+              {scanning?"Scanning...":"↻ Refresh"}
+            </button>
           </div>
-        ))}
-      </div>
-      <div style={{position:"relative",height:"calc(100vh - 300px)",minHeight:420,borderRadius:10,overflow:"hidden",border:"1px solid var(--border)"}}>
-        <div ref={mapRef} style={{height:"100%",width:"100%",background:"#f0f4f8"}}/>
-        <div style={{position:"absolute",bottom:16,left:16,zIndex:1000,background:"white",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 14px",fontSize:11}}>
-          <div style={{fontSize:10,fontWeight:700,color:"#64748b",textTransform:"uppercase",marginBottom:6}}>Risk level</div>
-          {[["#dc2626","High >70%"],["#d97706","Medium 35-70%"],["#16a34a","Low <35%"]].map(([c,l])=>(
-            <div key={l} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,fontSize:11}}>
-              <div style={{width:20,height:3,background:c,borderRadius:2}}/>{l}
-            </div>
-          ))}
+        </div>
+        <div id="dash-map" ref={mapRef}/>
+        <div className="map-stats">
+          <div className="map-stat">🔴 High risk: <span style={{color:"#ef4444"}}>{stats.high}</span></div>
+          <div className="map-stat">🟡 Medium: <span style={{color:"#f59e0b"}}>{stats.medium}</span></div>
+          <div className="map-stat">🟢 Low: <span style={{color:"#10b981"}}>{stats.low}</span></div>
+          <div className="map-stat">📦 Total: <span style={{color:"var(--accent2)"}}>{shipments.length}</span></div>
+          {lastScan && <div className="map-stat">🕐 Last scan: <span>{lastScan}</span></div>}
         </div>
       </div>
     </div>

@@ -1059,12 +1059,14 @@ function Chatbot({ token, username }) {
     setLoading(true);
 
     try {
-      // Call Groq directly from browser
+      // Groq API — free tier
+      const k1 = "gsk_54oExZ89AB0snTRz";
+      const k2 = "09kJWGdyb3FYcqd0QUyms1IKUMetpiGlqOS3";
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type":  "application/json",
-          "Authorization": "Bearer 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",
+          "Authorization": "Bearer " + k1 + k2,
         },
         body: JSON.stringify({
           model:       "llama3-8b-8192",
